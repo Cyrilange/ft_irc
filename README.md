@@ -97,3 +97,9 @@ To complete this project, we needed the following skills and concepts :
 - Error handling and robust software design
 - Understanding of the IRC protocol structure
 - Object-oriented design in C++98
+
+
+For this project we used Github with differents branchs 
+Create Branch : git switch -c "name of branch "
+Change branch : git switch " name of branche "
+push on branch : git push --set-upstream origin "Name of branch"

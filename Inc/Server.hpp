@@ -21,6 +21,7 @@ public:
     void initSocket();
     void run();
     void acceptClient();
+    void receiveMessage(int fd);
 };
 
 #endif

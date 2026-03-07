@@ -89,6 +89,25 @@ void Server::acceptClient()
     std::cout << "New client connected fd=" << clientFd << std::endl;
 }
 
+//function to receive message 
+void Server::receiveMessage(int fd)
+{
+    char buffer[1024];
+
+    int bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
+
+    if (bytes <= 0)
+    {
+        std::cout << "Client disconnected fd=" << fd << std::endl;
+        close(fd);
+        return;
+    }
+
+    buffer[bytes] = '\0';
+
+    std::cout << "Client " << fd << ": " << buffer << std::endl;
+}
+
 // Main server loop
 void Server::run()
 {
@@ -111,10 +130,14 @@ void Server::run()
             if (_pollfds[i].revents & POLLIN)
             {
                 // If the activity is on the server socket
-                if (_pollfds[i].fd == _serverSocket)
+                if (_pollfds[i].fd == _serverSocket){
 
                     // That means a new client wants to connect
-                    acceptClient();
+                    acceptClient();}
+				else {
+					
+    				receiveMessage(_pollfds[i].fd); //this means we receive a message from an other terminal
+				}
             }
         }
     }

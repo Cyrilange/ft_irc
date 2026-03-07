@@ -75,6 +75,8 @@ operators:
 
 [Client & Server Model explained](https://youtu.be/x6tKd1XBwZw?si=CtO3f5mgt3nbZZ5v)
 
+[Internet Relay Chat.](https://youtu.be/6UbKenFipjo?si=TiY_QJ-r-HUfXJzU)
+
 ## Read
 
 [Guide for Networking](https://beej.us/guide/bgnet/)
@@ -98,8 +100,3 @@ To complete this project, we needed the following skills and concepts :
 - Understanding of the IRC protocol structure
 - Object-oriented design in C++98
 
-
-For this project we used Github with differents branchs 
-Create Branch : git switch -c "name of branch "
-Change branch : git switch " name of branche "
-push on branch : git push --set-upstream origin "Name of branch"

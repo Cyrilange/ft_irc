@@ -22,6 +22,7 @@ all: $(NAME)
 	@echo "  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝ "
 	@echo "$(RESET)"
 	@echo "$(GREEN)$(BOLD)  ✓ Build successful — $(NAME) is ready!$(RESET)"
+	@echo " "
 
 $(NAME): $(OBJ)
 	@$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)

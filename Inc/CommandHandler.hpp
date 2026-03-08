@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 13:12:54 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/08 17:27:49 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/08 20:05:30 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,13 +18,17 @@
 #include <map>
 #include "Client.hpp"
 #include "Server.hpp"
+#include <sys/socket.h>
 class Server;
+class Client;
 
 class CommandHandler
 {
 
 public:
     CommandHandler(Server* server);
+    CommandHandler(const CommandHandler& other);
+    CommandHandler& operator=(const CommandHandler& other);
     ~CommandHandler();
     
     typedef void (CommandHandler::*HandlerFunc)(Client*, std::istringstream&);
@@ -40,12 +44,6 @@ public:
 private:
     Server* _server;
     std::map<std::string, HandlerFunc> _handlers;
-
-    // Disable copy
-    CommandHandler(const CommandHandler& other);
-    CommandHandler& operator=(const CommandHandler& other);
-
-    // Initialization of command table
     void initHandlers();
 };
 

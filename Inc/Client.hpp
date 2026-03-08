@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:30:17 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/08 12:52:31 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/08 20:00:34 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 #define CLIENT_HPP
 
 #include <string>
+#include "CommandHandler.hpp"
 
 class Client
 {
@@ -33,7 +34,8 @@ public:
 	bool isPassAccepted() const;
     void appendToBuffer(const std::string &data);
     std::string extractMessage();
-
+	bool isRegistered() const;
+	void sendMessage(const std::string& msg);
     void setNick(const std::string &nick);
     std::string getNick() const;
 

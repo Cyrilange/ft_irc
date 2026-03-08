@@ -31,8 +31,9 @@ public:
     void acceptClient();
     void receiveMessage(int fd);
     Client* getClientByFd(int fd);
+    std::vector<Client*>& getClients();
     void removeClient(int fd);
-    void handleCommand(Client *client, std::string msg);
+
 };
 
 #endif

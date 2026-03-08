@@ -11,6 +11,7 @@
 // Constructor of the Server class
 Server::Server(int port, const std::string &password) : _port(port), _password(password) { _cmdHandler = new CommandHandler(this);initSocket();}
 const std::string& Server::getPassword() const { return _password; }
+std::vector<Client*>& Server::getClients() {return this->_clients;}
 // Accept a new client connection
 void Server::acceptClient()
 {
@@ -31,8 +32,6 @@ void Server::acceptClient()
     pfd.revents = 0;
 
     _pollfds.push_back(pfd);
-
-    std::cout << "[" << newClient->getNick() << "] joined server" << std::endl;
 }
 
 Client* Server::getClientByFd(int fd)

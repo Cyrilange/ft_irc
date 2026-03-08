@@ -12,7 +12,12 @@ BOLD   = \033[1m
 CYAN   = \033[36m
 GREEN  = \033[32m
 
+.PHONY: all clean fclean re
+
 all: $(NAME)
+
+$(NAME): $(OBJ)
+	@$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 	@clear
 	@echo "$(CYAN)$(BOLD)"
 	@echo "  ██╗██████╗  ██████╗███████╗███████╗██████╗ ██╗   ██╗"
@@ -24,9 +29,6 @@ all: $(NAME)
 	@echo "$(RESET)"
 	@echo "$(GREEN)$(BOLD)  ✓ Build successful — $(NAME) is ready!$(RESET)"
 	@echo " "
-
-$(NAME): $(OBJ)
-	@$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
 
 %.o: %.cpp
 	@$(CXX) $(CXXFLAGS) -c $< -o $@

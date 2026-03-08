@@ -17,42 +17,8 @@ The learning objective in this project is to gain practical experience with low-
 
 ###### This project (ircserv) is to develop an IRC server using the C++ 98 standard, it means neither an IRC client nor an implementation of a server-to-server communication
 
-###### Externals functions we have avalaible are :
-socket, close, setsockopt, getsockname,
-getprotobyname, gethostbyname, getaddrinfo,
-freeaddrinfo, bind, connect, listen, accept,
-htons, htonl, ntohs, ntohl, inet_addr, inet_ntoa,
-inet_ntop, send, recv, signal, sigaction,
-sigemptyset, sigfillset, sigaddset, sigdelset,
-sigismember, lseek, fstat, fcntl, poll (or
-equivalent)
-
-the executable must be: <b>./ircserv "port" "password"</b>
-
-<b>Port</b>: The port number on which we listen for incoming IRC connections.
-
-<b>Password</b>: The connection password. It will be needed by any IRC client that tries to connect to the server.
-
-The server must be capable of handling multiple clients simultaneously without hanging.
-
-Forking is prohibited. All I/O operations must be non-blocking.
-
-Only 1 poll() (or equivalent) can be used for handling all these operations (read,
-write, but also listen, and so forth).
-
-Several IRC clients exist. We chose one of them as a reference. Our reference client will be used during the evaluation process.
-
-Our reference client must be able to connect to the server without encountering any error.
-
-Communication between client and server has to be done via TCP/IP (v4 or v6).
-
-Using the reference client with the server must be similar to using it with any official IRC server. However, we only have to implement the following features:
-
-- We must be able to authenticate, set a nickname, a username, join a channel,
-send and receive private messages using the reference client.
-- All the messages sent from one client to a channel have to be forwarded to
-every other client that joined the channel.
-- We must have operators and regular users.
+###### to start you shall use ./ircserv <port> <password> ex : 6667 pass
+###### Then open a new terminal ( you can open multiple) with nc then the port , ex : nc localhost 6667
 - Then, we have to implement the commands that are specific to channel
 operators:
   - KICK - Eject a client from the channel

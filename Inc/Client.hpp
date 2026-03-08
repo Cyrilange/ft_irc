@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:30:17 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/08 01:35:05 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/08 12:52:31 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,13 +22,15 @@ private:
     std::string _buffer;     // buffer for partial messages
     std::string _nick;       // nickname
     std::string _username;   // username
+	bool _passAccepted;     //password yes or not 
 
 public:
     Client(int fd);
     ~Client();
 
     int getFd() const;
-
+	void setPassAccepted(bool value);
+	bool isPassAccepted() const;
     void appendToBuffer(const std::string &data);
     std::string extractMessage();
 

@@ -1,5 +1,5 @@
 #include "../Inc/Server.hpp"      // Include the header file for the Server class
-
+#include "../Inc/CommandHandler.hpp"
 #include <iostream>               // For std::cout and std::cerr
 #include <cstring>                // For memset
 #include <sys/socket.h>           // For socket functions (socket, bind, listen, accept)
@@ -7,15 +7,10 @@
 #include <unistd.h>               // For close()
 #include <arpa/inet.h>            // For htons and network utilities
 
-// Constructor of the Server class
-Server::Server(int port, const std::string &password)
-{
-    _port = port;                 // Store the port number provided by the user
-    _password = password;         // Store the connection password
-	
-    initSocket();                 // Initialize the server socket and start listening
-}
 
+// Constructor of the Server class
+Server::Server(int port, const std::string &password) : _port(port), _password(password) { _cmdHandler = new CommandHandler(this);initSocket();}
+const std::string& Server::getPassword() const { return _password; }
 // Accept a new client connection
 void Server::acceptClient()
 {
@@ -37,7 +32,7 @@ void Server::acceptClient()
 
     _pollfds.push_back(pfd);
 
-    std::cout << "New client connected fd=" << clientFd << std::endl;
+    std::cout << "[" << newClient->getNick() << "] joined server" << std::endl;
 }
 
 Client* Server::getClientByFd(int fd)
@@ -140,13 +135,12 @@ void Server::receiveMessage(int fd)
 
     std::string msg;
     while (!(msg = client->extractMessage()).empty())
-    {
-        std::cout << "Client " << fd << " sent: " << msg << std::endl;
-
-        // next CommandRouter
-        // _commandRouter->processCommand(fd, msg);
-    }
+	{
+		// std::cout << "debug : Received : " << msg << std::endl;
+    	_cmdHandler->handleCommand(client, msg);
+	}
 }
+
 
 //function to receive message 
 
@@ -205,8 +199,10 @@ void Server::receiveMessage(int fd)
 Server::~Server()
 {
     // Close all file descriptors stored in the poll list
-    for (size_t i = 0; i < _pollfds.size(); i++)
+    for (size_t i = 0; i < _pollfds.size(); i++) {
         close(_pollfds[i].fd);
+	}
+	delete _cmdHandler;
 }
 
 

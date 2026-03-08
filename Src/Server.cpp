@@ -12,134 +12,192 @@ Server::Server(int port, const std::string &password)
 {
     _port = port;                 // Store the port number provided by the user
     _password = password;         // Store the connection password
-
+	
     initSocket();                 // Initialize the server socket and start listening
 }
 
-// Function responsible for creating and configuring the server socket
-void Server::initSocket()
-{
-    // Create a TCP socket using IPv4
-    _serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    // If socket creation failed, throw an exception
-    if (_serverSocket < 0)
-        throw std::runtime_error("socket() failed");
-
-    // Optional: make the socket non-blocking (commented for now)
-	//fcntl(_serverSocket, F_SETFL, O_NONBLOCK);
-
-    int opt = 1; // Option value used for setsockopt
-
-    // Allow the server to reuse the same port immediately after restart
-    if (setsockopt(_serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-        throw std::runtime_error("setsockopt() failed");
-
-    sockaddr_in addr; // Structure that will hold the server address information
-
-    // Set all bytes of the address structure to zero
-    std::memset(&addr, 0, sizeof(addr));
-
-    addr.sin_family = AF_INET;            // Specify IPv4 addressing
-    addr.sin_port = htons(_port);         // Convert port to network byte order
-    addr.sin_addr.s_addr = INADDR_ANY;    // Accept connections from any IP address
-
-    // Bind the socket to the specified IP and port
-    if (bind(_serverSocket, (sockaddr *)&addr, sizeof(addr)) < 0)
-        throw std::runtime_error("bind() failed");
-
-    // Start listening for incoming client connections
-    if (listen(_serverSocket, SOMAXCONN) < 0)
-        throw std::runtime_error("listen() failed");
-
-    pollfd serverPoll;                    // Structure used by poll() to monitor file descriptors
-
-    serverPoll.fd = _serverSocket;        // The file descriptor to monitor (the server socket)
-    serverPoll.events = POLLIN;           // We want to detect when data is available to read
-
-    // Add the server socket to the poll file descriptor list
-    _pollfds.push_back(serverPoll);
-
-    // Print a message indicating that the server started correctly
-    std::cout << "Server started on port " << _port << std::endl;
-}
-
-// Function used to accept a new client connection
+// Accept a new client connection
 void Server::acceptClient()
 {
-    // Accept a new client connection from the server socket
     int clientFd = accept(_serverSocket, NULL, NULL);
 
-    // If accept fails, print an error and stop
     if (clientFd < 0)
     {
-        std::cerr << "accept() failed" << std::endl;
+        std::cerr << "accept failed" << std::endl;
         return;
     }
 
-    pollfd clientPoll;           // Create a poll structure for the new client
+    Client* newClient = new Client(clientFd);
+    _clients.push_back(newClient);
 
-    clientPoll.fd = clientFd;    // Store the client's file descriptor
-    clientPoll.events = POLLIN;  // Monitor the client for incoming data
+    pollfd pfd;
+    pfd.fd = clientFd;
+    pfd.events = POLLIN;
+    pfd.revents = 0;
 
-    // Add the new client to the poll list so we can monitor it
-    _pollfds.push_back(clientPoll);
+    _pollfds.push_back(pfd);
 
-    // Print the new client's file descriptor for debugging
     std::cout << "New client connected fd=" << clientFd << std::endl;
 }
 
-//function to receive message 
+Client* Server::getClientByFd(int fd)
+{
+    for (size_t i = 0; i < _clients.size(); ++i)
+    {
+        if (_clients[i]->getFd() == fd)
+            return _clients[i];
+    }
+    return NULL; // pas trouvé
+}
+
+void Server::removeClient(int fd)
+{
+    // fermer le socket
+    close(fd);
+
+    // supprimer le client du vector _clients
+    for (size_t i = 0; i < _clients.size(); ++i)
+    {
+        if (_clients[i]->getFd() == fd)
+        {
+            delete _clients[i];            // libérer la mémoire
+            _clients.erase(_clients.begin() + i);
+            break;
+        }
+    }
+
+    // supprimer le client du vector _pollfds
+    for (size_t i = 0; i < _pollfds.size(); ++i)
+    {
+        if (_pollfds[i].fd == fd)
+        {
+            _pollfds.erase(_pollfds.begin() + i);
+            break;
+        }
+    }
+}
+
+// Function responsible for creating and configuring the server socket
+// Function to initialize the server socket and start listening for connections
+void Server::initSocket()
+{
+    _serverSocket = socket(AF_INET, SOCK_STREAM, 0); // Create a TCP IPv4 socket
+
+    if (_serverSocket < 0)                            // If socket creation failed
+        throw std::runtime_error("socket() failed");  // Throw an exception
+
+    int opt = 1;                                       // Option value for setsockopt
+
+    if (setsockopt(_serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+        throw std::runtime_error("setsockopt() failed"); // Allow port reuse after restart
+
+    sockaddr_in addr;                                  // Structure for server address
+
+    std::memset(&addr, 0, sizeof(addr));                // Clear structure memory
+
+    addr.sin_family = AF_INET;                          // Use IP addressing
+    addr.sin_port = htons(_port);                       // Convert port to network byte order
+    addr.sin_addr.s_addr = INADDR_ANY;                  // Accept connections from any IP
+
+    if (bind(_serverSocket, (sockaddr *)&addr, sizeof(addr)) < 0)
+        throw std::runtime_error("bind() failed");      // Bind socket to address and port
+
+    if (listen(_serverSocket, SOMAXCONN) < 0)
+        throw std::runtime_error("listen() failed");     // Start listening for connections
+
+    pollfd serverPoll;                                   // Structure used by poll()
+
+    serverPoll.fd = _serverSocket;                       // File descriptor to monitor
+    serverPoll.events = POLLIN;                          // Detect data available to read
+    serverPoll.revents = 0;                               // Initialize event flags to zero
+
+    _pollfds.push_back(serverPoll);                       // Add server socket to poll list
+
+    std::cout << "Server started on port " << _port << std::endl; // Print success message
+}
+
+// Function used to accept a new client connection
 void Server::receiveMessage(int fd)
 {
     char buffer[1024];
-
     int bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
 
     if (bytes <= 0)
     {
         std::cout << "Client disconnected fd=" << fd << std::endl;
         close(fd);
+        removeClient(fd);
         return;
     }
 
     buffer[bytes] = '\0';
 
-    std::cout << "Client " << fd << ": " << buffer << std::endl;
+    Client* client = getClientByFd(fd); // helper function to find client*
+    if (!client)
+        return;
+
+    client->appendToBuffer(std::string(buffer));
+
+    std::string msg;
+    while (!(msg = client->extractMessage()).empty())
+    {
+        std::cout << "Client " << fd << " sent: " << msg << std::endl;
+
+        // next CommandRouter
+        // _commandRouter->processCommand(fd, msg);
+    }
 }
 
+//function to receive message 
+
+
 // Main server loop
-void Server::run()
-{
-    while (true) // Infinite loop to keep the server running
-    {
-        // poll() waits for activity on the file descriptors
-        int ret = poll(&_pollfds[0], _pollfds.size(), -1);
+	void Server::run()
+	{
+		while (true)
+		{
+			int ret = poll(&_pollfds[0], _pollfds.size(), -1);
 
-        // If poll fails, print an error and stop the server
-        if (ret < 0)
-        {
-            std::cerr << "poll error" << std::endl;
-            return;
-        }
+			if (ret < 0)
+			{
+				std::cerr << "poll error" << std::endl;
+				return;
+			}
 
-        // Loop through all monitored file descriptors
-        for (size_t i = 0; i < _pollfds.size(); i++)
-        {
-            // Check if there is data to read on this descriptor
-            if (_pollfds[i].revents & POLLIN)
-            {
-                // If the activity is on the server socket
-                if (_pollfds[i].fd == _serverSocket){
+			for (size_t i = 0; i < _pollfds.size(); i++)
+	{
+		if (_pollfds[i].revents == 0) // no event, skip safely
+			continue;
 
-                    // That means a new client wants to connect
-                    acceptClient();}
-				else {
-					
-    				receiveMessage(_pollfds[i].fd); //this means we receive a message from an other terminal
-				}
-            }
-        }
+		if (_pollfds[i].revents & POLLIN) // data available
+		{
+			if (_pollfds[i].fd == _serverSocket) // new client
+			{
+				acceptClient();
+			}
+			else // message from client
+			{
+				receiveMessage(_pollfds[i].fd);
+			}
+		}
+		else if (_pollfds[i].revents & POLLHUP) // client closed connection
+		{
+			close(_pollfds[i].fd);
+			_pollfds.erase(_pollfds.begin() + i);
+			--i;
+		}
+		else if (_pollfds[i].revents & POLLERR) // error on socket
+		{
+			close(_pollfds[i].fd);
+			_pollfds.erase(_pollfds.begin() + i);
+			--i;
+		}
+		else if (_pollfds[i].revents & POLLNVAL) // invalid fd
+		{
+			_pollfds.erase(_pollfds.begin() + i);
+			--i;
+		}
+	}
     }
 }
 

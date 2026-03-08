@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:32:50 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/08 01:53:52 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/08 12:41:29 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,14 +26,21 @@ void Client::appendToBuffer(const std::string &data)
 
 std::string Client::extractMessage()
 {
-	size_t pos = _buffer.find("\r\n");
-	if (pos == std::string::npos)
-		pos = _buffer.find('\n'); // accept lone \n
-	if (pos == std::string::npos)
-		return "";
+    size_t pos = _buffer.find("\r\n");
+
+    if (pos == std::string::npos)
+        pos = _buffer.find('\n');
+
+    if (pos == std::string::npos)
+        return "";
 
     std::string message = _buffer.substr(0, pos);
-    _buffer.erase(0, pos + 2);
+
+    if (_buffer[pos] == '\r')
+        _buffer.erase(0, pos + 2);
+    else
+        _buffer.erase(0, pos + 1);
+
     return message;
 }
 

@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:30:17 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/08 20:00:34 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/09 22:40:30 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ private:
     std::string _nick;       // nickname
     std::string _username;   // username
 	bool _passAccepted;     //password yes or not 
+	bool _welcomeSent;
 
 public:
     Client(int fd);
@@ -34,13 +35,14 @@ public:
 	bool isPassAccepted() const;
     void appendToBuffer(const std::string &data);
     std::string extractMessage();
-	bool isRegistered() const;
 	void sendMessage(const std::string& msg);
     void setNick(const std::string &nick);
     std::string getNick() const;
-
+	bool isRegistered() const; //client check PASS + NICK + USER
     void setUsername(const std::string &username);
     std::string getUsername() const;
+	bool isWelcomeSent() const;
+	void setWelcomeSent(bool v);
 };
 
 #endif

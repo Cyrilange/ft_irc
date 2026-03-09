@@ -8,11 +8,27 @@ CommandHandler::CommandHandler(Server* server) : _server(server) { initHandlers(
 CommandHandler::~CommandHandler() {} // Destructor: nothing special to clean
 
 void CommandHandler::initHandlers() { // Initialize command map (string -> function)
+    _handlers["CAP"] = &CommandHandler::handleCAP; //cap is for hexchat 
     _handlers["PASS"] = &CommandHandler::handlePASS; // PASS command handler
     _handlers["NICK"] = &CommandHandler::handleNICK; // NICK command handler
     _handlers["USER"] = &CommandHandler::handleUSER; // USER command handler
     _handlers["JOIN"] = &CommandHandler::handleJOIN; // JOIN command handler
     _handlers["PRIVMSG"] = &CommandHandler::handlePRIVMSG; // PRIVMSG handler
+    _handlers["MODE"] = &CommandHandler::handleMODE;
+}
+
+void CommandHandler::handleCAP(Client* client, std::istringstream& iss)
+{
+    std::string subcmd;
+    iss >> subcmd;
+
+    if (subcmd == "LS") {
+        std::string response = ":ircserv CAP * LS :\r\n";
+        send(client->getFd(), response.c_str(), response.length(), 0);
+    } else if (subcmd == "REQ") {
+        std::string response = ":ircserv CAP * NAK :\r\n";
+        send(client->getFd(), response.c_str(), response.length(), 0);
+    }
 }
 
 void CommandHandler::handleCommand(Client* client, std::string msg)
@@ -35,6 +51,24 @@ void CommandHandler::handleCommand(Client* client, std::string msg)
     } else { // If command not found
         std::cout << "Unknown command: " << cmd << std::endl; // Debug message
     }
+}
+
+void CommandHandler::sendWelcome(Client* client)
+{
+    std::string nick = client->getNick();
+    std::string msg;
+
+    msg = ":ircserv 001 " + nick + " :Welcome to the IRC Network " + nick + "\r\n";
+    send(client->getFd(), msg.c_str(), msg.length(), 0);
+
+    msg = ":ircserv 002 " + nick + " :Your host is ircserv, running version 1.0\r\n";
+    send(client->getFd(), msg.c_str(), msg.length(), 0);
+
+    msg = ":ircserv 003 " + nick + " :This server was created just now\r\n";
+    send(client->getFd(), msg.c_str(), msg.length(), 0);
+
+    msg = ":ircserv 004 " + nick + " ircserv 1.0 o o\r\n";
+    send(client->getFd(), msg.c_str(), msg.length(), 0);
 }
 
 void CommandHandler::handlePASS(Client* client, std::istringstream& iss)
@@ -79,6 +113,12 @@ void CommandHandler::handleNICK(Client* client, std::istringstream& iss)
         }
     }
 
+    if (client->isRegistered() && !client->isWelcomeSent())
+    {
+        client->setWelcomeSent(true);
+        sendWelcome(client);
+    }
+
     client->setNick(nick); // Set nickname for client
     std::cout << "Client fd=" << client->getFd() << " nick=" << nick << std::endl; // Debug
 }
@@ -88,6 +128,11 @@ void CommandHandler::handleUSER(Client* client, std::istringstream& iss)
     std::string username; // Variable for username
     iss >> username; // Get username
     client->setUsername(username); // Set username
+    if (client->isRegistered() && !client->isWelcomeSent())
+    {
+        client->setWelcomeSent(true);
+        sendWelcome(client);
+    }
     std::cout << "Client " << client->getFd() << " set username: " << username << std::endl; // Debug
 }
 
@@ -109,4 +154,44 @@ void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss)
     client->sendMessage("Message to " + target + ": " + message + "\r\n"); // Send message (if method exists)
     std::cout << "Client " << client->getFd() << " sending message to "
               << target << ": " << message << std::endl; // Debug
+}
+
+std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeStr, std::istringstream& iss)
+{
+    std::vector<ModeChange> changes;
+    if (modeStr.empty()) {return changes; }
+    char sign = '+';// sign per default
+    for (size_t i = 0; i < modeStr.size(); i++)
+    {
+        if (modeStr[i] == '+' || modeStr[i] == '-') { sign = modeStr[i]; continue;}
+        ModeChange m;
+        m.sign = sign;
+        m.mode = modeStr[i];
+        m.param = "";
+        if (m.mode == 'k' || m.mode == 'o' || m.mode == 'l')
+            iss >> m.param;
+        changes.push_back(m);
+    }
+
+    return changes;
+}
+
+void CommandHandler::handleMODE(Client* client, std::istringstream& iss)
+{
+    std::string target;   // channel or nick
+    std::string modeStr;  // ex: "+itk" ou "-o"
+    iss >> target >> modeStr;
+    (void)client;
+
+    std::vector<ModeChange> changes = parseModeString(modeStr, iss);
+
+    for (size_t i = 0; i < changes.size(); i++)
+    {
+        ModeChange& m = changes[i];
+        if (m.mode == 'i') { /* invite only */ }
+        else if (m.mode == 't') { /* topic restrict */ }
+        else if (m.mode == 'k') { /* password, m.param = password */ }
+        else if (m.mode == 'o') { /* op, m.param = nick */ }
+        else if (m.mode == 'l') { /* limit, m.param = number */ }
+    }
 }

@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:32:50 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/09 22:40:54 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/09 23:16:59 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,6 +45,6 @@ std::string Client::getUsername() const { return _username; }
 void Client::setPassAccepted(bool value) { _passAccepted = value; }
 bool Client::isPassAccepted() const { return _passAccepted;}
 bool Client::isRegistered() const { return _passAccepted && !_nick.empty() && !_username.empty();}
-void Client::sendMessage(const std::string& msg) { ::send(_fd, msg.c_str(), msg.length(), 0); }
+void Client::sendMessage(const std::string& msg) { ::send(_fd, msg.c_str(), msg.length(), 0);}
 bool Client::isWelcomeSent() const { return _welcomeSent; }
 void Client::setWelcomeSent(bool v) { _welcomeSent = v; }

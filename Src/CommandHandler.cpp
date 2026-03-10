@@ -1,197 +1,198 @@
 #include "../Inc/CommandHandler.hpp"
 #include "../Inc/Server.hpp"
 #include "../Inc/Client.hpp"
+#include "../Inc/Replies.hpp"
 #include <iostream>
 
-CommandHandler::CommandHandler(Server* server) : _server(server) { initHandlers(); } // Constructor: store server and init commands
+CommandHandler::CommandHandler(Server* server) : _server(server) { initHandlers(); } // Constructor: store server pointer and initialize command handlers
 
-CommandHandler::~CommandHandler() {} // Destructor: nothing special to clean
+CommandHandler::~CommandHandler() {} // Destructor: nothing to clean
 
-void CommandHandler::initHandlers() { // Initialize command map (string -> function)
-    _handlers["CAP"] = &CommandHandler::handleCAP; //cap is for hexchat 
-    _handlers["PASS"] = &CommandHandler::handlePASS; // PASS command handler
-    _handlers["NICK"] = &CommandHandler::handleNICK; // NICK command handler
-    _handlers["USER"] = &CommandHandler::handleUSER; // USER command handler
-    _handlers["JOIN"] = &CommandHandler::handleJOIN; // JOIN command handler
-    _handlers["PRIVMSG"] = &CommandHandler::handlePRIVMSG; // PRIVMSG handler
-    _handlers["MODE"] = &CommandHandler::handleMODE;
+void CommandHandler::initHandlers() {
+    _handlers["CAP"]     = &CommandHandler::handleCAP;     // CAP command for HexChat handshake
+    _handlers["PASS"]    = &CommandHandler::handlePASS;    // PASS command for authentication
+    _handlers["NICK"]    = &CommandHandler::handleNICK;    // NICK command to set nickname
+    _handlers["USER"]    = &CommandHandler::handleUSER;    // USER command to set username
+    _handlers["JOIN"]    = &CommandHandler::handleJOIN;    // JOIN command to join a channel
+    _handlers["PRIVMSG"] = &CommandHandler::handlePRIVMSG; // PRIVMSG command to send a message
+    _handlers["MODE"]    = &CommandHandler::handleMODE;    // MODE command to change channel modes
 }
 
-void CommandHandler::handleCAP(Client* client, std::istringstream& iss)
+static void sendResponse(Client* client, const std::string& msg) // Send a formatted response to client, adds \r\n if missing
+{
+    std::string formatted = msg;
+    if (formatted.length() < 2 || formatted.substr(formatted.length() - 2) != "\r\n") // Check if \r\n is missing
+        formatted += "\r\n";                                                            // Add \r\n if missing
+    send(client->getFd(), formatted.c_str(), formatted.length(), 0);                   // Send to client
+}
+
+static void sendError(Client* client, const std::string& code, const std::string& message) // Send a numeric error reply to client
+{
+    std::string nick = client->getNick().empty() ? "*" : client->getNick(); // Use * if nick not set yet
+    sendResponse(client, ":ircserv " + code + " " + nick + " " + message);  // Format and send error
+}
+
+void CommandHandler::handleCAP(Client* client, std::istringstream& iss) // Handle CAP negotiation for HexChat
 {
     std::string subcmd;
-    iss >> subcmd;
+    iss >> subcmd;                                              // Extract CAP subcommand (LS, REQ, END)
 
-    if (subcmd == "LS") {
-        std::string response = ":ircserv CAP * LS :\r\n";
-        send(client->getFd(), response.c_str(), response.length(), 0);
-    } else if (subcmd == "REQ") {
-        std::string response = ":ircserv CAP * NAK :\r\n";
-        send(client->getFd(), response.c_str(), response.length(), 0);
-    }
+    if (subcmd == "LS")                                         // Client requests list of capabilities
+        sendResponse(client, ":ircserv CAP * LS :");            // Reply with empty capabilities list
+    else if (subcmd == "REQ")                                   // Client requests a capability
+        sendResponse(client, ":ircserv CAP * NAK :");           // Reject all capability requests
 }
 
-void CommandHandler::handleCommand(Client* client, std::string msg)
+void CommandHandler::handleCommand(Client* client, std::string msg) // Parse and dispatch incoming IRC command
 {
-    std::istringstream iss(msg); // Create stream to read words from message
-    std::string cmd; // Variable to store command name
-    iss >> cmd; // Extract first word (command)
-    cmd.erase(cmd.find_last_not_of("\r\n") + 1); // Remove \r or \n at end of command
+    std::istringstream iss(msg);                                // Create stream from raw message
+    std::string cmd;                                            // Variable to store command name
+    iss >> cmd;                                                 // Extract first word (the command)
+    cmd.erase(cmd.find_last_not_of("\r\n") + 1);               // Strip trailing \r\n from command
 
-    if (!client->isPassAccepted() && cmd != "PASS") // If password not accepted and not PASS
+    // CAP, NICK, USER allowed before PASS for HexChat handshake
+    if (!client->isPassAccepted() && cmd != "PASS" && cmd != "CAP" && cmd != "NICK" && cmd != "USER")
     {
-        std::string error = "ERROR :You need to authenticate with PASS first\r\n"; // Error message
-        send(client->getFd(), error.c_str(), error.length(), 0); // Send error to client
-        return; // Stop processing command
+        sendResponse(client, "ERROR :You need to authenticate with PASS first"); // Reject unauthenticated command
+        return;
     }
 
-    std::map<std::string, HandlerFunc>::iterator it = _handlers.find(cmd); // Find command in map
-    if (it != _handlers.end()) { // If command exists
-        (this->*(it->second))(client, iss); // Call corresponding function
-    } else { // If command not found
-        std::cout << "Unknown command: " << cmd << std::endl; // Debug message
-    }
+    std::map<std::string, HandlerFunc>::iterator it = _handlers.find(cmd); // Look up command in handler map
+    if (it != _handlers.end())                                              // If command exists
+        (this->*(it->second))(client, iss);                                 // Call the corresponding handler
+    else
+        std::cout << "Unknown command: " << cmd << std::endl;               // Debug: unknown command
 }
 
-void CommandHandler::sendWelcome(Client* client)
+void CommandHandler::sendWelcome(Client* client) // Send the 4 welcome messages after successful registration
 {
-    std::string nick = client->getNick();
-    std::string msg;
+    const std::string& nick = client->getNick(); // Get client nickname
 
-    msg = ":ircserv 001 " + nick + " :Welcome to the IRC Network " + nick + "\r\n";
-    send(client->getFd(), msg.c_str(), msg.length(), 0);
-
-    msg = ":ircserv 002 " + nick + " :Your host is ircserv, running version 1.0\r\n";
-    send(client->getFd(), msg.c_str(), msg.length(), 0);
-
-    msg = ":ircserv 003 " + nick + " :This server was created just now\r\n";
-    send(client->getFd(), msg.c_str(), msg.length(), 0);
-
-    msg = ":ircserv 004 " + nick + " ircserv 1.0 o o\r\n";
-    send(client->getFd(), msg.c_str(), msg.length(), 0);
+    sendResponse(client, ":ircserv " + std::string(RPL_WELCOME)  + " " + nick + " :Welcome to the IRC Network " + nick); // 001
+    sendResponse(client, ":ircserv " + std::string(RPL_YOURHOST) + " " + nick + " :Your host is ircserv, running version 1.0"); // 002
+    sendResponse(client, ":ircserv " + std::string(RPL_CREATED)  + " " + nick + " :This server was created just now"); // 003
+    sendResponse(client, ":ircserv " + std::string(RPL_MYINFO)   + " " + nick + " ircserv 1.0 o o"); // 004
 }
 
-void CommandHandler::handlePASS(Client* client, std::istringstream& iss)
+void CommandHandler::handlePASS(Client* client, std::istringstream& iss) // Handle PASS command for authentication
 {
-    std::string pass; // Variable for password
-    iss >> pass; // Get password from message
+    std::string pass;
+    iss >> pass;                                                // Extract password from message
 
-    if (client->isPassAccepted()) { // If password already sent before
-        std::string error = "ERROR :PASS already sent\r\n"; // Error message
-        send(client->getFd(), error.c_str(), error.length(), 0); // Send error
-        return; // Stop
+    if (client->isPassAccepted()) {                             // If already authenticated
+        sendError(client, ERR_ALREADYREGISTRED, ":You may not reregister"); // Send already registered error
+        return;
     }
 
-    if (pass == _server->getPassword()) { // If password is correct
-        client->setPassAccepted(true); // Mark client as authenticated
+    if (pass == _server->getPassword()) {                       // If password matches
+        client->setPassAccepted(true);                          // Mark client as authenticated
         std::cout << "Client " << client->getFd() << " password accepted" << std::endl; // Debug
-    } else { // If password is wrong
-        std::string error = "ERROR :Wrong password\r\n"; // Error message
-        send(client->getFd(), error.c_str(), error.length(), 0); // Send error
+    } else {                                                    // If password is wrong
+        sendError(client, ERR_PASSWDMISMATCH, ":Password incorrect"); // Send wrong password error
         std::cout << "Client " << client->getFd() << " wrong password" << std::endl; // Debug
     }
 }
 
-void CommandHandler::handleNICK(Client* client, std::istringstream& iss)
+void CommandHandler::handleNICK(Client* client, std::istringstream& iss) // Handle NICK command to set or change nickname
 {
-    std::string nick; // Variable for nickname
-    iss >> nick; // Get nickname
+    std::string nick;
+    iss >> nick;                                                // Extract nickname from message
 
-    if (nick.empty()) { // If nickname is empty
-        std::cout << "Client " << client->getFd() << " tried to set empty nick" << std::endl; // Debug
-        return; // Stop
+    if (nick.empty()) {                                         // If no nickname provided
+        sendError(client, ERR_NONICKNAMEGIVEN, ":No nickname given"); // Send missing nick error
+        return;
     }
 
-    if (!nick.empty() && nick[nick.size() - 1] == '\r') // Remove trailing \r if present
+    if (nick[nick.size() - 1] == '\r')                          // Remove trailing \r if present
         nick.erase(nick.size() - 1);
 
-    std::vector<Client*>& clients = _server->getClients(); // Get list of clients
-    for (size_t i = 0; i < clients.size(); i++) { // Loop through clients
-        if (clients[i]->getNick() == nick) { // If nick already used
-            std::cout << "Nick already in use: " << nick << std::endl; // Debug
-            return; // Stop
+    std::vector<Client*>& clients = _server->getClients();      // Get list of all connected clients
+    for (size_t i = 0; i < clients.size(); i++) {               // Loop through all clients
+        if (clients[i]->getNick() == nick) {                    // If nick already taken
+            sendError(client, ERR_NICKNAMEINUSE, nick + " :Nickname is already in use"); // Send nick in use error
+            return;
         }
     }
 
-    if (client->isRegistered() && !client->isWelcomeSent())
-    {
-        client->setWelcomeSent(true);
-        sendWelcome(client);
-    }
-
-    client->setNick(nick); // Set nickname for client
+    client->setNick(nick);                                      // Set nick before checking registration
     std::cout << "Client fd=" << client->getFd() << " nick=" << nick << std::endl; // Debug
-}
 
-void CommandHandler::handleUSER(Client* client, std::istringstream& iss)
-{
-    std::string username; // Variable for username
-    iss >> username; // Get username
-    client->setUsername(username); // Set username
-    if (client->isRegistered() && !client->isWelcomeSent())
-    {
-        client->setWelcomeSent(true);
-        sendWelcome(client);
+    if (client->isRegistered() && !client->isWelcomeSent()) {   // If fully registered and welcome not sent yet
+        client->setWelcomeSent(true);                           // Mark welcome as sent
+        sendWelcome(client);                                    // Send welcome messages
     }
-    std::cout << "Client " << client->getFd() << " set username: " << username << std::endl; // Debug
 }
 
-void CommandHandler::handleJOIN(Client* client, std::istringstream& iss)
+void CommandHandler::handleUSER(Client* client, std::istringstream& iss) // Handle USER command to set username
 {
-    std::string channelName; // Variable for channel name
-    iss >> channelName; // Get channel name
+    std::string username;
+    iss >> username;                                            // Extract username from message
+    client->setUsername(username);                              // Set username on client
+    std::cout << "Client " << client->getFd() << " set username: " << username << std::endl; // Debug
+
+    if (client->isRegistered() && !client->isWelcomeSent()) {   // If fully registered and welcome not sent yet
+        client->setWelcomeSent(true);                           // Mark welcome as sent
+        sendWelcome(client);                                    // Send welcome messages
+    }
+}
+
+void CommandHandler::handleJOIN(Client* client, std::istringstream& iss) // Handle JOIN command to join a channel
+{
+    std::string channelName;
+    iss >> channelName;                                         // Extract channel name from message
     std::cout << "Client " << client->getFd() << " joining channel: " << channelName << std::endl; // Debug
 }
 
-void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss)
+void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss) // Handle PRIVMSG command to send a message
 {
-    std::string target; // Target user or channel
-    iss >> target; // Get target
-    std::string message; // Message content
-    std::getline(iss, message); // Get rest of message
-    if (!message.empty() && message[0] == ' ') { message.erase(0,1); } // Remove leading space
+    std::string target;
+    iss >> target;                                              // Extract target (nick or channel)
+    std::string message;
+    std::getline(iss, message);                                 // Get the rest as message content
+    if (!message.empty() && message[0] == ' ')                  // Remove leading space if present
+        message.erase(0, 1);
 
-    client->sendMessage("Message to " + target + ": " + message + "\r\n"); // Send message (if method exists)
-    std::cout << "Client " << client->getFd() << " sending message to "
-              << target << ": " << message << std::endl; // Debug
+    client->sendMessage("Message to " + target + ": " + message + "\r\n"); // Send message (routing not implemented yet)
+    std::cout << "Client " << client->getFd() << " sending message to " << target << ": " << message << std::endl; // Debug
 }
 
-std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeStr, std::istringstream& iss)
+std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeStr, std::istringstream& iss) // Parse mode string into list of ModeChange structs
 {
     std::vector<ModeChange> changes;
-    if (modeStr.empty()) {return changes; }
-    char sign = '+';// sign per default
+    if (modeStr.empty())                                        // If no mode string provided
+        return changes;                                         // Return empty list
+
+    char sign = '+';                                            // Default sign is +
     for (size_t i = 0; i < modeStr.size(); i++)
     {
-        if (modeStr[i] == '+' || modeStr[i] == '-') { sign = modeStr[i]; continue;}
+        if (modeStr[i] == '+' || modeStr[i] == '-') { sign = modeStr[i]; continue; } // Update sign
         ModeChange m;
-        m.sign = sign;
-        m.mode = modeStr[i];
-        m.param = "";
-        if (m.mode == 'k' || m.mode == 'o' || m.mode == 'l')
-            iss >> m.param;
-        changes.push_back(m);
+        m.sign = sign;                                          // Set sign for this mode
+        m.mode = modeStr[i];                                    // Set mode letter
+        m.param = "";                                           // Default no parameter
+        if (m.mode == 'k' || m.mode == 'o' || m.mode == 'l')   // These modes require a parameter
+            iss >> m.param;                                     // Extract parameter from stream
+        changes.push_back(m);                                   // Add to list
     }
-
     return changes;
 }
 
-void CommandHandler::handleMODE(Client* client, std::istringstream& iss)
+void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Handle MODE command to change channel modes
 {
-    std::string target;   // channel or nick
-    std::string modeStr;  // ex: "+itk" ou "-o"
-    iss >> target >> modeStr;
-    (void)client;
+    std::string target;
+    std::string modeStr;
+    iss >> target >> modeStr;                                   // Extract target and mode string
+    (void)client;                                               // Unused for now
 
-    std::vector<ModeChange> changes = parseModeString(modeStr, iss);
+    std::vector<ModeChange> changes = parseModeString(modeStr, iss); // Parse mode string into changes
 
     for (size_t i = 0; i < changes.size(); i++)
     {
         ModeChange& m = changes[i];
-        if (m.mode == 'i') { /* invite only */ }
-        else if (m.mode == 't') { /* topic restrict */ }
-        else if (m.mode == 'k') { /* password, m.param = password */ }
-        else if (m.mode == 'o') { /* op, m.param = nick */ }
-        else if (m.mode == 'l') { /* limit, m.param = number */ }
+        if (m.mode == 'i') { /* invite only */ }                // Toggle invite-only mode
+        else if (m.mode == 't') { /* topic restrict */ }        // Toggle topic restriction
+        else if (m.mode == 'k') { /* password */ }              // Set/remove channel password
+        else if (m.mode == 'o') { /* operator */ }              // Give/take operator privilege
+        else if (m.mode == 'l') { /* user limit */ }            // Set/remove user limit
     }
 }

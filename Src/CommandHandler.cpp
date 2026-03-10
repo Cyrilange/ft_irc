@@ -196,3 +196,36 @@ void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Hand
         else if (m.mode == 'l') { /* user limit */ }            // Set/remove user limit
     }
 }
+
+/*
+** CommandHandler.cpp
+**
+** WHAT IS DONE:
+** - CAP handshake for HexChat (LS, REQ, NAK)
+** - PASS authentication with error replies
+** - NICK with duplicate check and error replies
+** - USER with username set
+** - Welcome messages (001, 002, 003, 004) on full registration
+** - MODE string parser (sign + mode + param)
+** - sendResponse() and sendError() utilities
+**
+** WHAT IS MISSING:
+** - QUIT   : disconnect client and broadcast to all channels he was in
+** - PART   : leave a channel and broadcast to remaining members
+** - PING   : respond with PONG or HexChat will disconnect after timeout
+** - KICK   : operator removes a client from a channel (needs Channel class)
+** - INVITE : operator invites a client to invite-only channel (needs Channel class)
+** - TOPIC  : view or change channel topic (needs Channel class)
+** - MODE   : handlers are empty, need Channel class to apply i/t/k/o/l
+** - JOIN   : needs Channel class to create/join, broadcast, send 353/366
+** - PRIVMSG: needs routing to channel members or specific nick
+**
+** CHANNEL CLASS IS REQUIRED FOR:
+** - JOIN, PART, KICK, INVITE, TOPIC, MODE, PRIVMSG
+** - Channel must store: name, topic, key, userLimit,
+**   inviteOnly, topicRestricted, members, operators
+**
+** BONUS MISSING:
+** - IRC Bot responding to commands in a channel (!time, !help, !echo)
+** - File transfer via DCC SEND
+*/

@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:32:50 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/09 23:16:59 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/10 15:04:44 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,3 +48,27 @@ bool Client::isRegistered() const { return _passAccepted && !_nick.empty() && !_
 void Client::sendMessage(const std::string& msg) { ::send(_fd, msg.c_str(), msg.length(), 0);}
 bool Client::isWelcomeSent() const { return _welcomeSent; }
 void Client::setWelcomeSent(bool v) { _welcomeSent = v; }
+
+
+/*
+** Client.cpp
+**
+** WHAT IS DONE:
+** - Constructor initializes fd, _passAccepted and _welcomeSent
+** - extractMessage() handles both \r\n and \n line endings
+** - appendToBuffer() accumulates incoming data until full message received
+** - isRegistered() checks PASS + NICK + USER all set before welcome
+** - sendMessage() sends raw message directly to client fd
+** - isWelcomeSent() / setWelcomeSent() prevents sending 001 twice
+**
+** WHAT IS MISSING:
+** - _channels : list of channels the client is in (needed for QUIT/PART broadcast)
+** - addChannel()    : add a channel to client's list when he joins
+** - removeChannel() : remove a channel from client's list when he leaves
+** - getChannels()   : return list of channels for QUIT broadcast
+** - _hostname       : store client hostname (needed for proper IRC message format)
+** - _realname       : store realname from USER command (4th parameter)
+** - getPrefix()     : return ":nick!user@host" format used in all IRC messages
+** - sendMessage()   : should add \r\n protection like sendResponse() in CommandHandler
+** - Destructor      : should remove client from all channels before destroying
+*/

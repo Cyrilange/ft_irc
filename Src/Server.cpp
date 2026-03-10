@@ -208,3 +208,29 @@ Server::~Server()
 
 //for now open a terminal and write . ./ircserv 6667 pass, open an other terminal and write  nc localhost 6667
 //the first terminal should have new clients written
+
+
+/*
+** Server.cpp
+**
+** WHAT IS DONE:
+** - TCP socket creation with SO_REUSEADDR
+** - bind() and listen() on given port
+** - poll() event loop for non-blocking I/O given by the subject avec fcnl 
+** - acceptClient() for new incoming connections
+** - receiveMessage() with buffer and message extraction
+** - removeClient() cleans both _clients and _pollfds
+** - POLLHUP, POLLERR, POLLNVAL handled in event loop
+** - CommandHandler created and deleted properly
+**
+** WHAT IS MISSING:
+** - getClientByNick() : needed for PRIVMSG and KICK to find a client by nickname
+** - getChannel()      : needed once Channel class exists, to find a channel by name
+** - addChannel()      : create and store a new channel
+** - removeChannel()   : delete a channel when last member leaves
+** - broadcast()       : send a message to all connected clients (needed for QUIT)
+** - Signal handling   : CTRL+C (SIGINT) should cleanly close all fds and exit
+** - Non-blocking fds  : fcntl() should be set on accepted client sockets
+** - removeClient()    : should also remove client from all channels he was in
+** - Constructor       : initSocket() should be called before _cmdHandler is created
+*/

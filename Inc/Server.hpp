@@ -7,6 +7,7 @@
 #include <poll.h>
 #include <sstream>
 #include "Client.hpp"
+#include <fcntl.h>  // For fcntl() and O_NONBLOCK
 
 class Client;
 class CommandHandler;

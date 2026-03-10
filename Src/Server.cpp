@@ -22,6 +22,12 @@ void Server::acceptClient()
         std::cerr << "accept failed" << std::endl;
         return;
     }
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0)  // Set client socket to non-blocking
+    {
+        std::cerr << "fcntl failed" << std::endl;
+        close(clientFd);
+        return;
+    }
 
     Client* newClient = new Client(clientFd);
     _clients.push_back(newClient);
@@ -76,6 +82,8 @@ void Server::removeClient(int fd)
 void Server::initSocket()
 {
     _serverSocket = socket(AF_INET, SOCK_STREAM, 0); // Create a TCP IPv4 socket
+	if (fcntl(_serverSocket, F_SETFL, O_NONBLOCK) < 0)  // Set server socket to non-blocking
+    	throw std::runtime_error("fcntl() failed");
 
     if (_serverSocket < 0)                            // If socket creation failed
         throw std::runtime_error("socket() failed");  // Throw an exception
@@ -216,7 +224,7 @@ Server::~Server()
 ** WHAT IS DONE:
 ** - TCP socket creation with SO_REUSEADDR
 ** - bind() and listen() on given port
-** - poll() event loop for non-blocking I/O given by the subject avec fcnl 
+** - poll() event loop for non-blocking I/O 
 ** - acceptClient() for new incoming connections
 ** - receiveMessage() with buffer and message extraction
 ** - removeClient() cleans both _clients and _pollfds
@@ -230,7 +238,7 @@ Server::~Server()
 ** - removeChannel()   : delete a channel when last member leaves
 ** - broadcast()       : send a message to all connected clients (needed for QUIT)
 ** - Signal handling   : CTRL+C (SIGINT) should cleanly close all fds and exit
-** - Non-blocking fds  : fcntl() should be set on accepted client sockets
+
 ** - removeClient()    : should also remove client from all channels he was in
 ** - Constructor       : initSocket() should be called before _cmdHandler is created
 */

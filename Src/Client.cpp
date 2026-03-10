@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:32:50 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/10 15:04:44 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/10 15:48:00 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,4 +71,4 @@ void Client::setWelcomeSent(bool v) { _welcomeSent = v; }
 ** - getPrefix()     : return ":nick!user@host" format used in all IRC messages
 ** - sendMessage()   : should add \r\n protection like sendResponse() in CommandHandler
 ** - Destructor      : should remove client from all channels before destroying
-*/
+*/  

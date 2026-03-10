@@ -89,8 +89,30 @@ void CommandHandler::handlePASS(Client* client, std::istringstream& iss) // Hand
         std::cout << "Client " << client->getFd() << " password accepted" << std::endl; // Debug
     } else {                                                    // If password is wrong
         sendError(client, ERR_PASSWDMISMATCH, ":Password incorrect"); // Send wrong password error
-        std::cout << "Client " << client->getFd() << " wrong password" << std::endl; // Debug
     }
+}
+
+static bool isValidNickChar(char c, bool first) // Check if character is valid for a nickname
+{
+    if (first) // First character must be a letter or special character
+        return (std::isalpha(c) || c == '[' || c == ']' || c == '\\' ||
+                c == '`' || c == '_' || c == '^' || c == '{' || c == '|' || c == '}');
+    return (std::isalpha(c) || std::isdigit(c) || c == '-' || // Other characters can be letter, digit or special
+            c == '[' || c == ']' || c == '\\' || c == '`' ||
+            c == '_' || c == '^' || c == '{' || c == '|' || c == '}');
+}
+
+static bool isValidNick(const std::string& nick) // Check if the full nickname is valid
+{
+    if (nick.empty() || nick.length() > 9)        // Nick must be 1-9 characters (IRC standard)
+        return false;
+    if (!isValidNickChar(nick[0], true))           // First character check
+        return false;
+    for (size_t i = 1; i < nick.size(); i++) {     // Check remaining characters
+        if (!isValidNickChar(nick[i], false))
+            return false;
+    }
+    return true;
 }
 
 void CommandHandler::handleNICK(Client* client, std::istringstream& iss) // Handle NICK command to set or change nickname
@@ -103,8 +125,11 @@ void CommandHandler::handleNICK(Client* client, std::istringstream& iss) // Hand
         return;
     }
 
-    if (nick[nick.size() - 1] == '\r')                          // Remove trailing \r if present
-        nick.erase(nick.size() - 1);
+    if (nick[nick.size() - 1] == '\r') { nick.erase(nick.size() - 1);}                         // Remove trailing \r if present
+    if (!isValidNick(nick)) {                                       // If nickname contains invalid characters
+        sendError(client, ERR_ERRONEUSNICK, nick + " :Erroneous nickname"); // Send invalid nick error
+        return;
+    }
 
     std::vector<Client*>& clients = _server->getClients();      // Get list of all connected clients
     for (size_t i = 0; i < clients.size(); i++) {               // Loop through all clients
@@ -153,7 +178,6 @@ void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss) // H
         message.erase(0, 1);
 
     client->sendMessage("Message to " + target + ": " + message + "\r\n"); // Send message (routing not implemented yet)
-    std::cout << "Client " << client->getFd() << " sending message to " << target << ": " << message << std::endl; // Debug
 }
 
 std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeStr, std::istringstream& iss) // Parse mode string into list of ModeChange structs

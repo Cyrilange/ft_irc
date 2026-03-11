@@ -300,3 +300,13 @@ void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Hand
 ** - IRC Bot responding to commands in a channel (!time, !help, !echo)
 ** - File transfer via DCC SEND
 */
+
+/*Src/
+├── CommandHandler.cpp        // initHandlers, handleCommand, sendWelcome, sendResponse, sendError
+├── commands/
+│   ├── CmdConnection.cpp     // PASS, NICK, USER, CAP, PING, QUIT
+│   ├── CmdChannel.cpp        // JOIN, PART, KICK, INVITE, TOPIC, MODE
+│   ├── CmdMessage.cpp        // PRIVMSG, NOTICE
+
+
+we need to check with the norm if we can divide the commandhandler in 3 parts as it is super big and it will be even bigger */

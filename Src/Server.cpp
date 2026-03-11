@@ -9,9 +9,28 @@
 
 
 // Constructor of the Server class
-Server::Server(int port, const std::string &password) : _port(port), _password(password) { _cmdHandler = new CommandHandler(this);initSocket();}
+Server::Server(int port, const std::string &password) : _port(port), _password(password)
+{
+    _instance = this;                                    // Store instance for signal handler
+    signal(SIGINT, Server::signalHandler);               // Register CTRL+C
+	//signal(SIGTSTP, Server::signalHandler);             // crtl + z
+    _cmdHandler = new CommandHandler(this);
+    initSocket();
+}
 const std::string& Server::getPassword() const { return _password; }
 std::vector<Client*>& Server::getClients() {return this->_clients;}
+
+Server* Server::_instance = NULL;
+bool    Server::_running  = true;
+
+void Server::signalHandler(int sig)
+{
+    (void)sig;
+    std::cout << "\nServer shutting down..." << std::endl;
+    _running = false;  // Just set flag, no delete
+}
+
+
 // Accept a new client connection
 void Server::acceptClient()
 {
@@ -50,6 +69,16 @@ Client* Server::getClientByFd(int fd)
     return NULL; // pas trouvé
 }
 
+Client* Server::getClientByNick(const std::string& nick)
+{
+    for (size_t i = 0; i < _clients.size(); ++i)
+    {
+        if (_clients[i]->getNick() == nick)
+            return _clients[i];
+    }
+    return NULL; // not found
+}
+
 void Server::removeClient(int fd)
 {
     // fermer le socket
@@ -82,19 +111,14 @@ void Server::removeClient(int fd)
 void Server::initSocket()
 {
     _serverSocket = socket(AF_INET, SOCK_STREAM, 0); // Create a TCP IPv4 socket
-	if (fcntl(_serverSocket, F_SETFL, O_NONBLOCK) < 0)  // Set server socket to non-blocking
-    	throw std::runtime_error("fcntl() failed");
-
-    if (_serverSocket < 0)                            // If socket creation failed
-        throw std::runtime_error("socket() failed");  // Throw an exception
-
+    if (_serverSocket < 0){                            // If socket creation failed
+        throw std::runtime_error("socket() failed"); } // Throw an exception
+	if (fcntl(_serverSocket, F_SETFL, O_NONBLOCK) < 0){  // Set server socket to non-blocking
+    	throw std::runtime_error("fcntl() failed");}
     int opt = 1;                                       // Option value for setsockopt
-
     if (setsockopt(_serverSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
         throw std::runtime_error("setsockopt() failed"); // Allow port reuse after restart
-
     sockaddr_in addr;                                  // Structure for server address
-
     std::memset(&addr, 0, sizeof(addr));                // Clear structure memory
 
     addr.sin_family = AF_INET;                          // Use IP addressing
@@ -106,13 +130,10 @@ void Server::initSocket()
 
     if (listen(_serverSocket, SOMAXCONN) < 0)
         throw std::runtime_error("listen() failed");     // Start listening for connections
-
     pollfd serverPoll;                                   // Structure used by poll()
-
     serverPoll.fd = _serverSocket;                       // File descriptor to monitor
     serverPoll.events = POLLIN;                          // Detect data available to read
     serverPoll.revents = 0;                               // Initialize event flags to zero
-
     _pollfds.push_back(serverPoll);                       // Add server socket to poll list
 
     std::cout << "Server started on port " << _port << std::endl; // Print success message
@@ -155,12 +176,13 @@ void Server::receiveMessage(int fd)
 // Main server loop
 	void Server::run()
 	{
-		while (true)
+		while (_running)
 		{
 			int ret = poll(&_pollfds[0], _pollfds.size(), -1);
 
 			if (ret < 0)
 			{
+				if(!_running) {return ;} // If interrupted by signal, exit cleanly
 				std::cerr << "poll error" << std::endl;
 				return;
 			}
@@ -205,11 +227,16 @@ void Server::receiveMessage(int fd)
 // Destructor of the Server class
 Server::~Server()
 {
-    // Close all file descriptors stored in the poll list
-    for (size_t i = 0; i < _pollfds.size(); i++) {
-        close(_pollfds[i].fd);
-	}
-	delete _cmdHandler;
+    for (size_t i = 0; i < _clients.size(); i++)
+        delete _clients[i];                              // Free all clients
+    _clients.clear();
+
+    for (size_t i = 0; i < _pollfds.size(); i++)
+        close(_pollfds[i].fd);                           // Close all file descriptors
+    _pollfds.clear();
+
+    delete _cmdHandler;                                  // Free command handler
+    _instance = NULL;
 }
 
 

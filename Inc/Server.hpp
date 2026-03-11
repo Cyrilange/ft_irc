@@ -8,6 +8,8 @@
 #include <sstream>
 #include "Client.hpp"
 #include <fcntl.h>  // For fcntl() and O_NONBLOCK
+#include <signal.h> //for signal like crtl + C
+#include <cstdlib>  // For exit()
 
 class Client;
 class CommandHandler;
@@ -32,8 +34,12 @@ public:
     void acceptClient();
     void receiveMessage(int fd);
     Client* getClientByFd(int fd);
+    Client* getClientByNick(const std::string& nick);
     std::vector<Client*>& getClients();
     void removeClient(int fd);
+    static Server*  _instance;
+    static bool     _running;
+    static void    signalHandler(int sig); // static signal handler
 
 };
 

@@ -170,14 +170,26 @@ void CommandHandler::handleJOIN(Client* client, std::istringstream& iss) // Hand
 
 void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss) // Handle PRIVMSG command to send a message
 {
-    std::string target;
-    iss >> target;                                              // Extract target (nick or channel)
+    std::string targetName;
+    iss >> targetName;                                              // Extract target (nick or channel)
     std::string message;
-    std::getline(iss, message);                                 // Get the rest as message content
-    if (!message.empty() && message[0] == ' ')                  // Remove leading space if present
+    std::getline(iss, message);                                     // Get the rest as message content
+    if (!message.empty() && message[0] == ' ')                      // Remove leading space if present
         message.erase(0, 1);
 
-    client->sendMessage("Message to " + target + ": " + message + "\r\n"); // Send message (routing not implemented yet)
+    if (targetName.empty()) {                                       // If no target provided
+        sendError(client, ERR_NEEDMOREPARAMS, "PRIVMSG :Not enough parameters");
+        return;
+    }
+
+    Client* target = _server->getClientByNick(targetName);          // Find target client by nick
+    if (!target) {                                                   // If target not found
+        sendError(client, ERR_NOSUCHNICK, targetName + " :No such nick");
+        return;
+    }
+
+    std::string prefix = ":" + client->getNick() + " PRIVMSG " + targetName + " :" + message + "\r\n";
+    target->sendMessage(prefix);                                    // Send message to target
 }
 
 std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeStr, std::istringstream& iss) // Parse mode string into list of ModeChange structs

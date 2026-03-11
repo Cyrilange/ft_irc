@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 13:12:54 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/09 22:50:06 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/11 13:43:33 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,7 @@ public:
     void handleUSER(Client* client, std::istringstream& iss);
     void handleJOIN(Client* client, std::istringstream& iss);
     void handlePRIVMSG(Client* client, std::istringstream& iss);
+    void handlePING(Client* client, std::istringstream& iss);
     void sendWelcome(Client* client);
     //std::vector<ModeChange> parseModeString(const std::string& modeStr, std::istringstream& iss);
     void handleMODE(Client* client, std::istringstream& iss);

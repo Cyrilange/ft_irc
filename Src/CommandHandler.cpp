@@ -16,7 +16,10 @@ void CommandHandler::initHandlers() {
     _handlers["JOIN"]    = &CommandHandler::handleJOIN;    // JOIN command to join a channel
     _handlers["PRIVMSG"] = &CommandHandler::handlePRIVMSG; // PRIVMSG command to send a message
     _handlers["MODE"]    = &CommandHandler::handleMODE;    // MODE command to change channel modes
+    _handlers["PING"] = &CommandHandler::handlePING;        //ping for hexChat
 }
+
+
 
 static void sendResponse(Client* client, const std::string& msg) // Send a formatted response to client, adds \r\n if missing
 {
@@ -30,6 +33,17 @@ static void sendError(Client* client, const std::string& code, const std::string
 {
     std::string nick = client->getNick().empty() ? "*" : client->getNick(); // Use * if nick not set yet
     sendResponse(client, ":ircserv " + code + " " + nick + " " + message);  // Format and send error
+}
+
+void CommandHandler::handlePING(Client* client, std::istringstream& iss) // Handle PING to keep connection alive
+{
+    std::string token;
+    iss >> token;                                               // Extract ping token sent by client
+
+    if (token.empty())                                          // If no token provided
+        sendResponse(client, ":ircserv PONG ircserv");          // Send basic pong
+    else
+        sendResponse(client, ":ircserv PONG ircserv :" + token); // Echo token back to client
 }
 
 void CommandHandler::handleCAP(Client* client, std::istringstream& iss) // Handle CAP negotiation for HexChat
@@ -51,7 +65,7 @@ void CommandHandler::handleCommand(Client* client, std::string msg) // Parse and
     cmd.erase(cmd.find_last_not_of("\r\n") + 1);               // Strip trailing \r\n from command
 
     // CAP, NICK, USER allowed before PASS for HexChat handshake
-    if (!client->isPassAccepted() && cmd != "PASS" && cmd != "CAP" && cmd != "NICK" && cmd != "USER")
+    if (!client->isPassAccepted() && cmd != "PASS" && cmd != "CAP" && cmd != "NICK" && cmd != "USER" && cmd != "PING")
     {
         sendResponse(client, "ERROR :You need to authenticate with PASS first"); // Reject unauthenticated command
         return;
@@ -154,11 +168,15 @@ void CommandHandler::handleUSER(Client* client, std::istringstream& iss) // Hand
     iss >> username;                                            // Extract username from message
     client->setUsername(username);                              // Set username on client
     std::cout << "Client " << client->getFd() << " set username: " << username << std::endl; // Debug
-
+    if (client->isWelcomeSent()) {
+        sendError(client, ERR_ALREADYREGISTRED, ":You may not reregister");
+        return;
+    }
     if (client->isRegistered() && !client->isWelcomeSent()) {   // If fully registered and welcome not sent yet
         client->setWelcomeSent(true);                           // Mark welcome as sent
         sendWelcome(client);                                    // Send welcome messages
     }
+
 }
 
 void CommandHandler::handleJOIN(Client* client, std::istringstream& iss) // Handle JOIN command to join a channel
@@ -244,6 +262,7 @@ void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Hand
 ** - Welcome messages (001, 002, 003, 004) on full registration
 ** - MODE string parser (sign + mode + param)
 ** - sendResponse() and sendError() utilities
+- PRIVMSG: 
 **
 ** WHAT IS MISSING:
 ** - QUIT   : disconnect client and broadcast to all channels he was in
@@ -254,7 +273,7 @@ void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Hand
 ** - TOPIC  : view or change channel topic (needs Channel class)
 ** - MODE   : handlers are empty, need Channel class to apply i/t/k/o/l
 ** - JOIN   : needs Channel class to create/join, broadcast, send 353/366
-** - PRIVMSG: needs routing to channel members or specific nick
+** 
 **
 ** CHANNEL CLASS IS REQUIRED FOR:
 ** - JOIN, PART, KICK, INVITE, TOPIC, MODE, PRIVMSG

@@ -259,7 +259,7 @@ Server::~Server()
 ** - CommandHandler created and deleted properly
 **
 ** WHAT IS MISSING:
-** - getClientByNick() : needed for PRIVMSG and KICK to find a client by nickname
+** 
 ** - getChannel()      : needed once Channel class exists, to find a channel by name
 ** - addChannel()      : create and store a new channel
 ** - removeChannel()   : delete a channel when last member leaves

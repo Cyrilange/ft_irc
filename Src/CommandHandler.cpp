@@ -1,4 +1,4 @@
-#include "../Inc/CommandHandler.hpp"
+
 #include "../Inc/Server.hpp"
 #include "../Inc/Client.hpp"
 #include "../Inc/Replies.hpp"
@@ -17,6 +17,7 @@ void CommandHandler::initHandlers() {
     _handlers["PRIVMSG"] = &CommandHandler::handlePRIVMSG; // PRIVMSG command to send a message
     _handlers["MODE"]    = &CommandHandler::handleMODE;    // MODE command to change channel modes
     _handlers["PING"] = &CommandHandler::handlePING;        //ping for hexChat
+    _handlers["QUIT"] = &CommandHandler::handleQUIT;       //to quit , to leave 
 }
 
 
@@ -164,14 +165,14 @@ void CommandHandler::handleNICK(Client* client, std::istringstream& iss) // Hand
 
 void CommandHandler::handleUSER(Client* client, std::istringstream& iss) // Handle USER command to set username
 {
-    std::string username;
-    iss >> username;                                            // Extract username from message
-    client->setUsername(username);                              // Set username on client
-    std::cout << "Client " << client->getFd() << " set username: " << username << std::endl; // Debug
     if (client->isWelcomeSent()) {
         sendError(client, ERR_ALREADYREGISTRED, ":You may not reregister");
         return;
     }
+    std::string username;
+    iss >> username;                                            // Extract username from message
+    client->setUsername(username);                              // Set username on client
+    std::cout << "Client " << client->getFd() << " set username: " << username << std::endl; // Debug
     if (client->isRegistered() && !client->isWelcomeSent()) {   // If fully registered and welcome not sent yet
         client->setWelcomeSent(true);                           // Mark welcome as sent
         sendWelcome(client);                                    // Send welcome messages
@@ -229,6 +230,21 @@ std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeS
         changes.push_back(m);                                   // Add to list
     }
     return changes;
+}
+
+void CommandHandler::handleQUIT(Client* client, std::istringstream& iss) // Handle QUIT command to disconnect client
+{
+    std::string reason;
+    std::getline(iss, reason);                                  // Get quit reason
+    if (!reason.empty() && reason[0] == ' ')                    // Remove leading space
+        reason.erase(0, 1);
+    if (!reason.empty() && reason[0] == ':')                    // Remove leading colon
+        reason.erase(0, 1);
+
+    std::cout << "Client " << client->getNick() << " quit: " << reason << std::endl; // Debug
+
+    sendResponse(client, "ERROR :Closing connection");          // Notify client
+    _server->removeClient(client->getFd());                     // Remove and close fd
 }
 
 void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Handle MODE command to change channel modes

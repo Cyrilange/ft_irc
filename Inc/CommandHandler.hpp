@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 13:12:54 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/11 13:43:33 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/11 22:58:36 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,22 +19,16 @@
 #include "Client.hpp"
 #include "Server.hpp"
 #include <sys/socket.h>
+#include "Channel.hpp"
 class Server;
 class Client;
-
-struct ModeChange {
-    char        sign;    // '+' or '-'
-    char        mode;    // 'i', 't', 'k', 'o', 'l'
-    std::string param;   // parameter 
-};
-
+class Channel;
+ 
 class CommandHandler
 {
 
 public:
     CommandHandler(Server* server);
-    CommandHandler(const CommandHandler& other);
-    CommandHandler& operator=(const CommandHandler& other);
     ~CommandHandler();
     
     typedef void (CommandHandler::*HandlerFunc)(Client*, std::istringstream&);
@@ -48,8 +42,8 @@ public:
     void handleJOIN(Client* client, std::istringstream& iss);
     void handlePRIVMSG(Client* client, std::istringstream& iss);
     void handlePING(Client* client, std::istringstream& iss);
+    void handleQUIT(Client* client, std::istringstream& iss);
     void sendWelcome(Client* client);
-    //std::vector<ModeChange> parseModeString(const std::string& modeStr, std::istringstream& iss);
     void handleMODE(Client* client, std::istringstream& iss);
 
 private:

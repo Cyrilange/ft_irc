@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:30:17 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/09 23:09:17 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/11 22:32:53 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,8 +15,7 @@
 
 #include <string>
 #include "CommandHandler.hpp"
-#include "CheckMessage.hpp"
-class CheckMessage;
+
 
 class Client
 {

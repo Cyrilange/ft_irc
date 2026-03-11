@@ -1,6 +1,7 @@
 #include "../Inc/Server.hpp"
 #include <iostream>
 #include <cstdlib>
+#include "../Inc/Channel.hpp"
 
 int main(int argc, char **argv)
 {

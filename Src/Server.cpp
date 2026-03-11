@@ -13,9 +13,8 @@ Server::Server(int port, const std::string &password) : _port(port), _password(p
 {
     _instance = this;                                    // Store instance for signal handler
     signal(SIGINT, Server::signalHandler);               // Register CTRL+C
-	//signal(SIGTSTP, Server::signalHandler);             // crtl + z
-    _cmdHandler = new CommandHandler(this);
-    initSocket();
+    initSocket();                                        // Init socket first
+    _cmdHandler = new CommandHandler(this);              // Then create command handler
 }
 const std::string& Server::getPassword() const { return _password; }
 std::vector<Client*>& Server::getClients() {return this->_clients;}
@@ -66,7 +65,7 @@ Client* Server::getClientByFd(int fd)
         if (_clients[i]->getFd() == fd)
             return _clients[i];
     }
-    return NULL; // pas trouvé
+    return NULL; // not found
 }
 
 Client* Server::getClientByNick(const std::string& nick)
@@ -81,21 +80,21 @@ Client* Server::getClientByNick(const std::string& nick)
 
 void Server::removeClient(int fd)
 {
-    // fermer le socket
+    // close socket
     close(fd);
 
-    // supprimer le client du vector _clients
+    // delete client
     for (size_t i = 0; i < _clients.size(); ++i)
     {
         if (_clients[i]->getFd() == fd)
         {
-            delete _clients[i];            // libérer la mémoire
+            delete _clients[i];            // free memory
             _clients.erase(_clients.begin() + i);
             break;
         }
     }
 
-    // supprimer le client du vector _pollfds
+    // delete client
     for (size_t i = 0; i < _pollfds.size(); ++i)
     {
         if (_pollfds[i].fd == fd)
@@ -147,15 +146,14 @@ void Server::receiveMessage(int fd)
 
     if (bytes <= 0)
     {
-        std::cout << "Client disconnected fd=" << fd << std::endl;
-        close(fd);
-        removeClient(fd);
+        std::cout << "debug Client disconnected fd=" << fd << std::endl;
+        removeClient(fd);                                        // close() is already called inside removeClient
         return;
     }
 
     buffer[bytes] = '\0';
 
-    Client* client = getClientByFd(fd); // helper function to find client*
+    Client* client = getClientByFd(fd);                         // Find client by fd
     if (!client)
         return;
 
@@ -163,10 +161,11 @@ void Server::receiveMessage(int fd)
 
     std::string msg;
     while (!(msg = client->extractMessage()).empty())
-	{
-		// std::cout << "debug : Received : " << msg << std::endl;
-    	_cmdHandler->handleCommand(client, msg);
-	}
+    {
+        _cmdHandler->handleCommand(client, msg);
+        if (!getClientByFd(fd))                                 // Check if client was removed during command (QUIT)
+            return;
+    }
 }
 
 
@@ -257,15 +256,14 @@ Server::~Server()
 ** - removeClient() cleans both _clients and _pollfds
 ** - POLLHUP, POLLERR, POLLNVAL handled in event loop
 ** - CommandHandler created and deleted properly
-**
+**** - Signal handling   : CTRL+C (SIGINT) should cleanly close all fds and exit
+
 ** WHAT IS MISSING:
 ** 
 ** - getChannel()      : needed once Channel class exists, to find a channel by name
 ** - addChannel()      : create and store a new channel
 ** - removeChannel()   : delete a channel when last member leaves
 ** - broadcast()       : send a message to all connected clients (needed for QUIT)
-** - Signal handling   : CTRL+C (SIGINT) should cleanly close all fds and exit
-
 ** - removeClient()    : should also remove client from all channels he was in
 ** - Constructor       : initSocket() should be called before _cmdHandler is created
 */

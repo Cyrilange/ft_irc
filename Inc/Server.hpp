@@ -23,6 +23,8 @@ private:
     std::vector<pollfd> _pollfds;
     std::vector<Client*> _clients; // list of connected clients
     CommandHandler* _cmdHandler; // command router 
+    static Server*  _instance;
+    static bool     _running;
 
 public:
 
@@ -37,8 +39,6 @@ public:
     Client* getClientByNick(const std::string& nick);
     std::vector<Client*>& getClients();
     void removeClient(int fd);
-    static Server*  _instance;
-    static bool     _running;
     static void    signalHandler(int sig); // static signal handler
 
 };

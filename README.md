@@ -1,4 +1,4 @@
-## This project has been created as part of the 42 curriculum by csalamit , mariogo2 , aternero.
+_This project has been created as part of the 42 curriculum by csalamit , mariogo2 , aternero._
 
 # <u>Description</u>
 
@@ -17,8 +17,8 @@ The learning objective in this project is to gain practical experience with low-
 
 ###### This project (ircserv) is to develop an IRC server using the C++ 98 standard, it means neither an IRC client nor an implementation of a server-to-server communication
 
-###### to start you shall use ./ircserv <port> <password> ex : 6667 pass
-###### Then open a new terminal ( you can open multiple) with nc then the port , ex : nc localhost 6667
+###### to start you shall use ./ircserv [port] [password] 
+###### Then open a new terminal ( you can open multiple) with nc then the port , ex : nc [localhost || ipv4] 6667
 - Then, we have to implement the commands that are specific to channel
 operators:
   - KICK - Eject a client from the channel
@@ -30,6 +30,11 @@ operators:
     - k: Set/remove the channel key (password)
     - o: Give/take channel operator privilege
     - l: Set/remove the user limit to channel
+
+
+    First you need to put the pass , then make a nick and a user 
+    you can send message via privmsg [name to send ] [message ]
+    you can also join a channel 
 
 
 # <u>Resources</u>

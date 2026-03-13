@@ -12,8 +12,6 @@ BOLD   = \033[1m
 CYAN   = \033[36m
 GREEN  = \033[32m
 
-.PHONY: all clean fclean re
-
 all: $(NAME)
 
 $(NAME): $(OBJ)
@@ -40,3 +38,6 @@ fclean: clean
 	@rm -f $(NAME)
 
 re: fclean all
+
+.PHONY: all clean fclean re
+  

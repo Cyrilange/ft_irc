@@ -234,10 +234,42 @@ Server::~Server()
         close(_pollfds[i].fd);                           // Close all file descriptors
     _pollfds.clear();
 
+    for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); it++)
+    delete it->second;                                       // Free all channels
+    _channels.clear();
+
     delete _cmdHandler;                                  // Free command handler
     _instance = NULL;
 }
 
+//channels
+
+
+Channel* Server::getChannel(const std::string& name)        // Find channel by name
+{
+    std::map<std::string, Channel*>::iterator it = _channels.find(name);
+    if (it != _channels.end())
+        return it->second;
+    return NULL;
+}
+
+Channel* Server::createChannel(const std::string& name, Client* creator) // Create new channel
+{
+    Channel* channel = new Channel(name);
+    channel->addMember(creator);
+    channel->addAdmin(creator);                              // Creator is admin
+    _channels[name] = channel;
+    return channel;
+}
+
+void Server::removeChannel(const std::string& name)         // Delete channel when empty
+{
+    std::map<std::string, Channel*>::iterator it = _channels.find(name);
+    if (it != _channels.end()) {
+        delete it->second;
+        _channels.erase(it);
+    }
+}
 
 
 //for now open a terminal and write . ./ircserv 6667 pass, open an other terminal and write  nc localhost 6667

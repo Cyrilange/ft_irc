@@ -2,6 +2,7 @@
 #include "../Inc/Server.hpp"
 #include "../Inc/Client.hpp"
 #include "../Inc/Replies.hpp"
+#include "../Inc/Channel.hpp"
 #include <iostream>
 
 CommandHandler::CommandHandler(Server* server) : _server(server) { initHandlers(); } // Constructor: store server pointer and initialize command handlers
@@ -183,8 +184,64 @@ void CommandHandler::handleUSER(Client* client, std::istringstream& iss) // Hand
 void CommandHandler::handleJOIN(Client* client, std::istringstream& iss) // Handle JOIN command to join a channel
 {
     std::string channelName;
-    iss >> channelName;                                         // Extract channel name from message
-    std::cout << "Client " << client->getFd() << " joining channel: " << channelName << std::endl; // Debug
+    std::string key;
+    iss >> channelName >> key;                                  // Extract channel name and optional password
+
+    if (channelName.empty()) {                                  // If no channel name provided
+        sendError(client, ERR_NEEDMOREPARAMS, "JOIN :Not enough parameters");
+        return;
+    }
+
+    if (channelName[0] != '#') {                                // Channel name must start with #
+        sendError(client, ERR_NOSUCHCHANNEL, channelName + " :No such channel");
+        return;
+    }
+
+    Channel* channel = _server->getChannel(channelName);        // Try to find existing channel
+
+    if (!channel)                                               // If channel doesn't exist, create it
+        channel = _server->createChannel(channelName, client);
+    else
+    {
+        if (channel->isInviteOnly() && !channel->isInvited(client)) { // Check invite-only mode
+            sendError(client, ERR_INVITEONLYCHAN, channelName + " :Cannot join channel (+i)");
+            return;
+        }
+        if (!channel->getKey().empty() && channel->getKey() != key) { // Check password
+            sendError(client, ERR_BADCHANNELKEY, channelName + " :Cannot join channel (+k)");
+            return;
+        }
+        if (channel->getUserLimit() > 0 && (int)channel->getMembers().size() >= channel->getUserLimit()) { // Check user limit
+            sendError(client, ERR_CHANNELISFULL, channelName + " :Cannot join channel (+l)");
+            return;
+        }
+        channel->addMember(client);                             // Add client to existing channel
+    }
+
+    // Broadcast JOIN to all members including the new client
+    std::string joinMsg = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv JOIN " + channelName + "\r\n";
+    channel->broadcast(joinMsg);
+
+    // Send topic
+    if (channel->getTopic().empty())                            // If no topic set
+        sendResponse(client, ":ircserv " + std::string(RPL_NOTOPIC) + " " + client->getNick() + " " + channelName + " :No topic is set");
+    else                                                        // If topic exists
+        sendResponse(client, ":ircserv " + std::string(RPL_TOPIC) + " " + client->getNick() + " " + channelName + " :" + channel->getTopic());
+
+    // Send list of members
+    std::string namesList = "";
+    std::vector<Client*>& members = channel->getMembers();
+    for (size_t i = 0; i < members.size(); i++) {
+        if (channel->isAdmin(members[i]))           // Add @ prefix for admins
+            namesList += "@";
+        namesList += members[i]->getNick();
+        if (i + 1 < members.size())
+            namesList += " ";
+    }
+    sendResponse(client, ":ircserv " + std::string(RPL_NAMREPLY) + " " + client->getNick() + " = " + channelName + " :" + namesList); // 353
+    sendResponse(client, ":ircserv " + std::string(RPL_ENDOFNAMES) + " " + client->getNick() + " " + channelName + " :End of /NAMES list"); // 366
+
+    std::cout << "Client " << client->getNick() << " joined channel: " << channelName << std::endl; // Debug
 }
 
 void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss) // Handle PRIVMSG command to send a message
@@ -251,19 +308,71 @@ void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Hand
 {
     std::string target;
     std::string modeStr;
-    iss >> target >> modeStr;                                   // Extract target and mode string
-    (void)client;                                               // Unused for now
+    iss >> target >> modeStr;                                           // Extract target channel and mode string
 
-    std::vector<ModeChange> changes = parseModeString(modeStr, iss); // Parse mode string into changes
+    if (target.empty()) {                                               // If no target provided
+        sendError(client, ERR_NEEDMOREPARAMS, "MODE :Not enough parameters");
+        return;
+    }
+
+    Channel* channel = _server->getChannel(target);                     // Find channel by name
+    if (!channel) {                                                     // If channel not found
+        sendError(client, ERR_NOSUCHCHANNEL, target + " :No such channel");
+        return;
+    }
+
+    if (!channel->isAdmin(client)) {                                    // If client is not operator
+        sendError(client, ERR_CHANOPRIVSNEEDED, target + " :You're not channel operator");
+        return;
+    }
+
+    if (modeStr.empty())                                                // If no mode string, just return
+        return;
+
+    std::vector<ModeChange> changes = parseModeString(modeStr, iss);   // Parse mode string into changes
 
     for (size_t i = 0; i < changes.size(); i++)
     {
         ModeChange& m = changes[i];
-        if (m.mode == 'i') { /* invite only */ }                // Toggle invite-only mode
-        else if (m.mode == 't') { /* topic restrict */ }        // Toggle topic restriction
-        else if (m.mode == 'k') { /* password */ }              // Set/remove channel password
-        else if (m.mode == 'o') { /* operator */ }              // Give/take operator privilege
-        else if (m.mode == 'l') { /* user limit */ }            // Set/remove user limit
+
+        if (m.mode == 'i')                                              // Invite-only mode
+            channel->setInviteOnly(m.sign == '+');                      // + = on, - = off
+
+        else if (m.mode == 't')                                         // Topic restriction mode
+            channel->setTopicRestricted(m.sign == '+');                 // + = only ops can change topic
+
+        else if (m.mode == 'k')                                         // Channel password mode
+        {
+            if (m.sign == '+')
+                channel->setKey(m.param);                               // Set password
+            else
+                channel->setKey("");                                    // Remove password
+        }
+
+        else if (m.mode == 'o')                                         // Operator privilege mode
+        {
+            Client* target = _server->getClientByNick(m.param);         // Find target client by nick
+            if (!target) {                                              // If target not found
+                sendError(client, ERR_NOSUCHNICK, m.param + " :No such nick");
+                continue;
+            }
+            if (!channel->isMember(target)) {                           // If target not in channel
+                sendError(client, ERR_USERNOTINCHANNEL, m.param + " " + channel->getName() + " :not in channel");
+                continue;
+            }
+            if (m.sign == '+')
+                channel->addAdmin(target);                              // Give operator privilege
+            else
+                channel->removeAdmin(target);                           // Remove operator privilege
+        }
+
+        else if (m.mode == 'l')                                         // User limit mode
+        {
+            if (m.sign == '+')
+                channel->setUserLimit(std::atoi(m.param.c_str()));      // Set user limit
+            else
+                channel->setUserLimit(0);                               // Remove user limit (0 = no limit)
+        }
     }
 }
 

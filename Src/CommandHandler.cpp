@@ -65,19 +65,18 @@ void CommandHandler::handleCommand(Client* client, std::string msg) // Parse and
     std::string cmd;                                            // Variable to store command name
     iss >> cmd;                                                 // Extract first word (the command)
     cmd.erase(cmd.find_last_not_of("\r\n") + 1);               // Strip trailing \r\n from command
-
-    // CAP, NICK, USER allowed before PASS for HexChat handshake
     if (!client->isPassAccepted() && cmd != "PASS" && cmd != "CAP" && cmd != "NICK" && cmd != "USER" && cmd != "PING")
     {
         sendResponse(client, "ERROR :You need to authenticate with PASS first"); // Reject unauthenticated command
         return;
     }
+    std::map<std::string, HandlerFunc>::iterator it = _handlers.find(cmd);
 
-    std::map<std::string, HandlerFunc>::iterator it = _handlers.find(cmd); // Look up command in handler map
-    if (it != _handlers.end())                                              // If command exists
-        (this->*(it->second))(client, iss);                                 // Call the corresponding handler
-    else
-        std::cout << "Unknown command: " << cmd << std::endl;               // Debug: unknown command
+    if (it == _handlers.end()) {
+        std::cout << "Unknown command: " << cmd << std::endl; // if you do like NICKnickname with no space bwteen the command and the name youll have an error on the server side 
+        return;
+    }   
+    (this->*(it->second))(client, iss);                                 // Call the corresponding handler     
 }
 
 void CommandHandler::sendWelcome(Client* client) // Send the 4 welcome messages after successful registration
@@ -140,7 +139,6 @@ void CommandHandler::handleNICK(Client* client, std::istringstream& iss) // Hand
         sendError(client, ERR_NONICKNAMEGIVEN, ":No nickname given"); // Send missing nick error
         return;
     }
-
     if (nick[nick.size() - 1] == '\r') { nick.erase(nick.size() - 1);}                         // Remove trailing \r if present
     if (!isValidNick(nick)) {                                       // If nickname contains invalid characters
         sendError(client, ERR_ERRONEUSNICK, nick + " :Erroneous nickname"); // Send invalid nick error
@@ -375,47 +373,3 @@ void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Hand
         }
     }
 }
-
-/*
-** CommandHandler.cpp
-**
-** WHAT IS DONE:
-** - CAP handshake for HexChat (LS, REQ, NAK)
-** - PASS authentication with error replies
-** - NICK with duplicate check and error replies
-** - USER with username set
-** - Welcome messages (001, 002, 003, 004) on full registration
-** - MODE string parser (sign + mode + param)
-** - sendResponse() and sendError() utilities
-- PRIVMSG: 
-**
-** WHAT IS MISSING:
-** - QUIT   : disconnect client and broadcast to all channels he was in
-** - PART   : leave a channel and broadcast to remaining members
-** - PING   : respond with PONG or HexChat will disconnect after timeout
-** - KICK   : operator removes a client from a channel (needs Channel class)
-** - INVITE : operator invites a client to invite-only channel (needs Channel class)
-** - TOPIC  : view or change channel topic (needs Channel class)
-** - MODE   : handlers are empty, need Channel class to apply i/t/k/o/l
-** - JOIN   : needs Channel class to create/join, broadcast, send 353/366
-** 
-**
-** CHANNEL CLASS IS REQUIRED FOR:
-** - JOIN, PART, KICK, INVITE, TOPIC, MODE, PRIVMSG
-** - Channel must store: name, topic, key, userLimit,
-**   inviteOnly, topicRestricted, members, operators
-**
-** BONUS MISSING:
-** - IRC Bot responding to commands in a channel (!time, !help, !echo)
-** - File transfer via DCC SEND
-*/
-
-/*Src/
-├── CommandHandler.cpp        // initHandlers, handleCommand, sendWelcome, sendResponse, sendError
-├── commands/
-│   ├── CmdConnection.cpp     // PASS, NICK, USER, CAP, PING, QUIT
-│   ├── CmdChannel.cpp        // JOIN, PART, KICK, INVITE, TOPIC, MODE
-│   ├── CmdMessage.cpp        // PRIVMSG, NOTICE
-
-
-we need to check with the norm if we can divide the commandhandler in 3 parts as it is super big and it will be even bigger */

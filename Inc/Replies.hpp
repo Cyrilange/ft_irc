@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/10 14:31:55 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/10 14:32:49 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/23 15:45:01 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,7 @@
 # define ERR_CHANNELISFULL    "471"   // <channel> :Cannot join channel (+l)
 # define ERR_INVITEONLYCHAN   "473"   // <channel> :Cannot join channel (+i)
 # define ERR_BADCHANNELKEY    "475"   // <channel> :Cannot join channel (+k)
+# define ERR_BADCHANMASK	  "476"   // <channel> :Bad Channel Mask
 # define ERR_CHANOPRIVSNEEDED "482"   // <channel> :You're not channel operator
 
 #endif

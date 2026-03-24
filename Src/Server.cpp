@@ -18,6 +18,7 @@ Server::Server(int port, const std::string &password) : _port(port), _password(p
 }
 const std::string& Server::getPassword() const { return _password; }
 std::vector<Client*>& Server::getClients() {return this->_clients;}
+std::map<std::string, Channel*>& Server::getChannels() { return _channels;}
 
 Server* Server::_instance = NULL;
 bool    Server::_running  = true;

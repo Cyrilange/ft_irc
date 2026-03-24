@@ -9,7 +9,7 @@ CommandHandler::CommandHandler(Server* server) : _server(server) { initHandlers(
 
 CommandHandler::~CommandHandler() {} // Destructor: nothing to clean
 
-void CommandHandler::initHandlers() {
+void CommandHandler::initHandlers() { 
     _handlers["CAP"]     = &CommandHandler::handleCAP;     // CAP command for HexChat handshake
     _handlers["PASS"]    = &CommandHandler::handlePASS;    // PASS command for authentication
     _handlers["NICK"]    = &CommandHandler::handleNICK;    // NICK command to set nickname
@@ -19,6 +19,7 @@ void CommandHandler::initHandlers() {
     _handlers["MODE"]    = &CommandHandler::handleMODE;    // MODE command to change channel modes
     _handlers["PING"] = &CommandHandler::handlePING;        //ping for hexChat
     _handlers["QUIT"] = &CommandHandler::handleQUIT;       //to quit , to leave 
+    _handlers["PART"] = &CommandHandler::handlePART;     //to quit the chanell but not being disconected for the socket
     //part      
     //kick
     //topic
@@ -27,7 +28,7 @@ void CommandHandler::initHandlers() {
 }
 
 
-
+/*##################################FUNCTIONS UTILS###########################################################################*/
 static void sendResponse(Client* client, const std::string& msg) // Send a formatted response to client, adds \r\n if missing
 {
     std::string formatted = msg;
@@ -42,6 +43,78 @@ static void sendError(Client* client, const std::string& code, const std::string
     sendResponse(client, ":ircserv " + code + " " + nick + " " + message);  // Format and send error
 }
 
+static std::string cleanChannelName(const std::string& name)
+{
+    std::string res = name;
+
+    if (!res.empty() && res[res.size() - 1] == '\r')
+        res.erase(res.size() - 1);
+
+    return res;
+}
+
+static bool isValidChannelName(const std::string& name)
+{
+    if (name.length() < 2 || name.length() > 50)
+        return false;
+
+    if (name[0] != '#' && name[0] != '&')
+        return false;
+
+    for (size_t i = 0; i < name.length(); i++)
+    {
+        if (name[i] == ' ' || name[i] == ',' ||
+            name[i] == '\r' || name[i] == '\n' ||
+            name[i] == '\0')
+            return false;
+    }
+    return true;
+}
+
+static std::string buildNamesList(Channel* channel)
+{
+    std::string list;
+    std::vector<Client*>& members = channel->getMembers();
+
+    for (size_t i = 0; i < members.size(); i++)
+    {
+        if (channel->isAdmin(members[i]))
+            list += "@";
+
+        list += members[i]->getNick();
+
+        if (i + 1 < members.size())
+            list += " ";
+    }
+    return list;
+}
+
+static bool isValidNickChar(char c, bool first) // Check if character is valid for a nickname
+{
+    if (first) // First character must be a letter or special character
+        return (std::isalpha(c) || c == '[' || c == ']' || c == '\\' ||
+                c == '`' || c == '_' || c == '^' || c == '{' || c == '|' || c == '}');
+    return (std::isalpha(c) || std::isdigit(c) || c == '-' || // Other characters can be letter, digit or special
+            c == '[' || c == ']' || c == '\\' || c == '`' ||
+            c == '_' || c == '^' || c == '{' || c == '|' || c == '}');
+}
+
+static bool isValidNick(const std::string& nick) // Check if the full nickname is valid
+{
+    if (nick.empty() || nick.length() > 9)        // Nick must be 1-9 characters (IRC standard)
+        return false;
+    if (!isValidNickChar(nick[0], true))           // First character check
+        return false;
+    for (size_t i = 1; i < nick.size(); i++) {     // Check remaining characters
+        if (!isValidNickChar(nick[i], false))
+            return false;
+    }
+    return true;
+}
+
+/*##################################FUNCTIONS UTILS END###########################################################################*/
+
+//PING
 void CommandHandler::handlePING(Client* client, std::istringstream& iss) // Handle PING to keep connection alive
 {
     std::string token;
@@ -53,6 +126,7 @@ void CommandHandler::handlePING(Client* client, std::istringstream& iss) // Hand
         sendResponse(client, ":ircserv PONG ircserv :" + token); // Echo token back to client
 }
 
+//CAP
 void CommandHandler::handleCAP(Client* client, std::istringstream& iss) // Handle CAP negotiation for HexChat
 {
     std::string subcmd;
@@ -84,6 +158,7 @@ void CommandHandler::handleCommand(Client* client, std::string msg) // Parse and
     (this->*(it->second))(client, iss);                                 // Call the corresponding handler     
 }
 
+//WELCOME
 void CommandHandler::sendWelcome(Client* client) // Send the 4 welcome messages after successful registration
 {
     const std::string& nick = client->getNick(); // Get client nickname
@@ -94,6 +169,7 @@ void CommandHandler::sendWelcome(Client* client) // Send the 4 welcome messages 
     sendResponse(client, ":ircserv " + std::string(RPL_MYINFO)   + " " + nick + " ircserv 1.0 o o"); // 004
 }
 
+//PASSWORD
 void CommandHandler::handlePASS(Client* client, std::istringstream& iss) // Handle PASS command for authentication
 {
     std::string pass;
@@ -112,28 +188,7 @@ void CommandHandler::handlePASS(Client* client, std::istringstream& iss) // Hand
     }
 }
 
-static bool isValidNickChar(char c, bool first) // Check if character is valid for a nickname
-{
-    if (first) // First character must be a letter or special character
-        return (std::isalpha(c) || c == '[' || c == ']' || c == '\\' ||
-                c == '`' || c == '_' || c == '^' || c == '{' || c == '|' || c == '}');
-    return (std::isalpha(c) || std::isdigit(c) || c == '-' || // Other characters can be letter, digit or special
-            c == '[' || c == ']' || c == '\\' || c == '`' ||
-            c == '_' || c == '^' || c == '{' || c == '|' || c == '}');
-}
 
-static bool isValidNick(const std::string& nick) // Check if the full nickname is valid
-{
-    if (nick.empty() || nick.length() > 9)        // Nick must be 1-9 characters (IRC standard)
-        return false;
-    if (!isValidNickChar(nick[0], true))           // First character check
-        return false;
-    for (size_t i = 1; i < nick.size(); i++) {     // Check remaining characters
-        if (!isValidNickChar(nick[i], false))
-            return false;
-    }
-    return true;
-}
 
 void CommandHandler::handleNICK(Client* client, std::istringstream& iss) // Handle NICK command to set or change nickname
 {
@@ -169,126 +224,121 @@ void CommandHandler::handleNICK(Client* client, std::istringstream& iss) // Hand
     //need to make nickname to be changed 
 }
 
-void CommandHandler::handleUSER(Client* client, std::istringstream& iss) // Handle USER command to set username
+void CommandHandler::handleUSER(Client* client, std::istringstream& iss) 
 {
-    if (client->isWelcomeSent()) {
-        sendError(client, ERR_ALREADYREGISTRED, ":You may not reregister");
+    std::string username, hostname, servername, realname;
+    // extract the args
+    iss >> username >> hostname >> servername;
+    std::getline(iss, realname);
+    //for RCF 2812 we need 4 args for user <username> <hostname> <servername> :<realname>
+    if (username.empty() || realname.empty()) {
+        sendError(client, "461", "USER :Not enough parameters");
         return;
     }
-    std::string username;
-    iss >> username;                                            // Extract username from message
-    client->setUsername(username);                              // Set username on client
-    std::cout << "Client " << client->getFd() << " set username: " << username << std::endl; // Debug
-    if (client->isRegistered() && !client->isWelcomeSent()) {   // If fully registered and welcome not sent yet
-        client->setWelcomeSent(true);                           // Mark welcome as sent
-        sendWelcome(client);                                    // Send welcome messages
+    if (!client->getUsername().empty()) {
+        sendError(client, "462", ":You may not reregister");
+        return;
     }
-
+    if (!realname.empty() && realname[0] == ' ') realname.erase(0, 1);
+    if (!realname.empty() && realname[0] == ':') realname.erase(0, 1);
+    client->setUsername(username);
+    client->setRealname(realname);
+    if (!client->getNick().empty() && !client->isWelcomeSent()) {
+        client->setWelcomeSent(true);
+        sendWelcome(client);
+    }
 }
+
+//JOIN 
 
 void CommandHandler::handleJOIN(Client* client, std::istringstream& iss)
 {
-    std::string channelName;
-    std::string key;
-    iss >> channelName >> key;
-    //validation for the channel name
+    std::string channelName, key;
+    iss >> channelName >> key; channelName = cleanChannelName(channelName);
     if (channelName.empty()) {
         sendError(client, ERR_NEEDMOREPARAMS, "JOIN :Not enough parameters");
         return;
     }
-    if (channelName.length() < 2 || channelName.length() > 50 ||
-        (channelName[0] != '#' && channelName[0] != '&')) {
+
+    if (!isValidChannelName(channelName)) {
         sendError(client, ERR_BADCHANMASK, channelName + " :Bad Channel Mask");
         return;
     }
-    for (size_t i = 0; i < channelName.length(); i++) {
-        if (channelName[i] == ' ' || channelName[i] == ',' ||
-            channelName[i] == '\0' || channelName[i] == '\r' || channelName[i] == '\n') {
-            sendError(client, ERR_BADCHANMASK, channelName + " :Bad Channel Mask");
-            return;
-        }
-    } //end of the validation for the name 
-
     Channel* channel = _server->getChannel(channelName);
-    if (!channel) {
-        channel = _server->createChannel(channelName, client);
-    } else {
+    if (!channel) { channel = _server->createChannel(channelName, client);}
+    else {
+        if (channel->isMember(client)) {return;}
         if (channel->isInviteOnly() && !channel->isInvited(client)) {
             sendError(client, ERR_INVITEONLYCHAN, channelName + " :Cannot join channel (+i)");
             return;
         }
-
         if (!channel->getKey().empty() && channel->getKey() != key) {
             sendError(client, ERR_BADCHANNELKEY, channelName + " :Cannot join channel (+k)");
             return;
         }
-
         if (channel->getUserLimit() > 0 &&
             (int)channel->getMembers().size() >= channel->getUserLimit()) {
             sendError(client, ERR_CHANNELISFULL, channelName + " :Cannot join channel (+l)");
             return;
         }
-
         channel->addMember(client);
     }
-
-    std::string joinMsg = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv JOIN " + channelName + "\r\n";
-    channel->broadcast(joinMsg);
-
+    std::string joinMsg = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv JOIN " + channelName;
+    channel->broadcast(joinMsg, client);
+    sendResponse(client, joinMsg);
     if (channel->getTopic().empty())
-        sendResponse(client, ":ircserv " + std::string(RPL_NOTOPIC) + " " +  client->getNick() + " " + channelName + " :No topic is set");
+        sendResponse(client, ":ircserv " + std::string(RPL_NOTOPIC) + " " + client->getNick() + " " + channelName + " :No topic is set");
     else
         sendResponse(client, ":ircserv " + std::string(RPL_TOPIC) + " " + client->getNick() + " " + channelName + " :" + channel->getTopic());
-
-    std::string namesList = "";
-    std::vector<Client*>& members = channel->getMembers();
-
-    for (size_t i = 0; i < members.size(); i++) {
-        if (channel->isAdmin(members[i]))
-            namesList += "@";
-        namesList += members[i]->getNick();
-        if (i + 1 < members.size())
-            namesList += " ";
-    }
-    sendResponse(client, ":ircserv " + std::string(RPL_NAMREPLY) + " " +
-                 client->getNick() + " = " + channelName + " :" + namesList);
-
-    sendResponse(client, ":ircserv " + std::string(RPL_ENDOFNAMES) + " " +
-                 client->getNick() + " " + channelName + " :End of /NAMES list");
-
-    std::cout << "Client " << client->getNick()
-              << " joined channel: " << channelName << std::endl;
+    std::string namesList = buildNamesList(channel);
+    sendResponse(client, ":ircserv " + std::string(RPL_NAMREPLY) + " " + client->getNick() + " = " + channelName + " :" + namesList);
+    sendResponse(client, ":ircserv " + std::string(RPL_ENDOFNAMES) + " " +  client->getNick() + " " + channelName + " :End of /NAMES list");
 }
-void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss) // Handle PRIVMSG command to send a message
+ 
+//PRIVMSG
+void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss)
 {
     std::string targetName;
-    iss >> targetName;                                              // Extract target (nick or channel)
-    std::string message;
-    std::getline(iss, message);                                     // Get the rest as message content
-    if (!message.empty() && message[0] == ' ')                      // Remove leading space if present
-        message.erase(0, 1);
+    iss >> targetName;
 
-    if (targetName.empty()) {                                       // If no target provided
+    std::string message;
+    std::getline(iss, message);
+
+    if (!message.empty() && message[0] == ' ') { message.erase(0, 1);}
+    if (!message.empty() && message[0] == ':') {message.erase(0, 1);}
+    if (targetName.empty() || message.empty()) {
         sendError(client, ERR_NEEDMOREPARAMS, "PRIVMSG :Not enough parameters");
         return;
     }
+    std::string prefix = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv PRIVMSG " + targetName + " :" + message;
 
-    Client* target = _server->getClientByNick(targetName);          // Find target client by nick
-    if (!target) {                                                   // If target not found
-        sendError(client, ERR_NOSUCHNICK, targetName + " :No such nick");
-        return;
+    
+    if (targetName[0] == '#') { // If target is a channel
+        Channel* channel = _server->getChannel(targetName);
+        if (!channel) {
+            sendError(client, ERR_NOSUCHCHANNEL, targetName + " :No such channel");
+            return;
+        }
+        if (!channel->isMember(client)) {
+            sendError(client, ERR_CANNOTSENDTOCHAN, targetName + " :Cannot send to channel");
+            return;
+        }
+        channel->broadcast(prefix, client); // send to everyone except sender
     }
-
-    std::string prefix = ":" + client->getNick() + " PRIVMSG " + targetName + " :" + message + "\r\n";
-    target->sendMessage(prefix);                                    // Send message to target
+    else {
+        Client* target = _server->getClientByNick(targetName);
+        if (!target) {
+            sendError(client, ERR_NOSUCHNICK, targetName + " :No such nick");
+            return;
+        }
+        target->sendMessage(prefix + "\r\n");
+    }
 }
 
 std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeStr, std::istringstream& iss) // Parse mode string into list of ModeChange structs
 {
     std::vector<ModeChange> changes;
-    if (modeStr.empty())                                        // If no mode string provided
-        return changes;                                         // Return empty list
-
+    if (modeStr.empty())   {return changes; }     // If no mode string provided, Return empty list                                          
     char sign = '+';                                            // Default sign is +
     for (size_t i = 0; i < modeStr.size(); i++)
     {
@@ -304,21 +354,64 @@ std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeS
     return changes;
 }
 
-void CommandHandler::handleQUIT(Client* client, std::istringstream& iss) // Handle QUIT command to disconnect client
+//QUIT
+void CommandHandler::handleQUIT(Client* client, std::istringstream& iss)
 {
     std::string reason;
-    std::getline(iss, reason);                                  // Get quit reason
-    if (!reason.empty() && reason[0] == ' ')                    // Remove leading space
+    std::getline(iss, reason);
+
+    if (!reason.empty() && reason[0] == ' ')
         reason.erase(0, 1);
-    if (!reason.empty() && reason[0] == ':')                    // Remove leading colon
+    if (!reason.empty() && reason[0] == ':')
         reason.erase(0, 1);
 
-    std::cout << "Client " << client->getNick() << " quit: " << reason << std::endl; // Debug
+    std::string quitMsg = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv QUIT :" + reason;
+    // remove client from all channels
+    std::map<std::string, Channel*>& channels = _server->getChannels();
+    for (std::map<std::string, Channel*>::iterator it = channels.begin(); it != channels.end(); ++it)
+    {
+        Channel* channel = it->second;
 
-    sendResponse(client, "ERROR :Closing connection");          // Notify client
-    _server->removeClient(client->getFd());                     // Remove and close fd
+        if (channel->isMember(client)) {
+            channel->broadcast(quitMsg, client);
+            channel->removeMember(client);
+        }
+    }
+    std::cout << "Client " << client->getNick() << " quit: " << reason << std::endl;
+    sendResponse(client, "ERROR :Closing connection");
+    _server->removeClient(client->getFd());
 }
+//PART
+void CommandHandler::handlePART(Client* client, std::istringstream& iss)
+{
+    std::string chanName;
+    iss >> chanName;
+    if (chanName.empty()) {
+        sendError(client, ERR_NEEDMOREPARAMS, "PART :Not enough parameters");
+        return;
+    }
+    Channel* channel = _server->getChannel(chanName);
+    if (!channel) {
+        sendError(client, ERR_NOSUCHCHANNEL, chanName + " :No such channel");
+        return;
+    }
+    if (!channel->isMember(client)) {
+        sendError(client, ERR_NOTONCHANNEL, chanName + " :You're not on that channel");
+        return;
+    }
+    std::string reason;
+    std::getline(iss, reason);
 
+    if (!reason.empty() && reason[0] == ' ') {reason.erase(0, 1);}
+    if (!reason.empty() && reason[0] == ':')  reason.erase(0, 1);
+    std::string partMsg = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv PART " + chanName;
+    if (!reason.empty()) {partMsg += " :" + reason;}
+    channel->broadcast(partMsg, client);
+    sendResponse(client, partMsg);
+    channel->removeMember(client);
+    if (channel->getMembers().empty()) { _server->removeChannel(chanName); }
+}
+//mode
 void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Handle MODE command to change channel modes
 {
     std::string target;
@@ -329,33 +422,24 @@ void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Hand
         sendError(client, ERR_NEEDMOREPARAMS, "MODE :Not enough parameters");
         return;
     }
-
     Channel* channel = _server->getChannel(target);                     // Find channel by name
     if (!channel) {                                                     // If channel not found
         sendError(client, ERR_NOSUCHCHANNEL, target + " :No such channel");
         return;
     }
-
     if (!channel->isAdmin(client)) {                                    // If client is not operator
         sendError(client, ERR_CHANOPRIVSNEEDED, target + " :You're not channel operator");
         return;
     }
-
-    if (modeStr.empty())                                                // If no mode string, just return
-        return;
-
+    if (modeStr.empty()) {return;}                                                // If no mode string, just return  
     std::vector<ModeChange> changes = parseModeString(modeStr, iss);   // Parse mode string into changes
 
     for (size_t i = 0; i < changes.size(); i++)
     {
         ModeChange& m = changes[i];
 
-        if (m.mode == 'i')                                              // Invite-only mode
-            channel->setInviteOnly(m.sign == '+');                      // + = on, - = off
-
-        else if (m.mode == 't')                                         // Topic restriction mode
-            channel->setTopicRestricted(m.sign == '+');                 // + = only ops can change topic
-
+        if (m.mode == 'i')  {channel->setInviteOnly(m.sign == '+');}     // Invite-only mode + = on, - = off
+        else if (m.mode == 't') {channel->setTopicRestricted(m.sign == '+'); }  // Topic restriction mode + = only ops can change topic
         else if (m.mode == 'k')                                         // Channel password mode
         {
             if (m.sign == '+')
@@ -363,7 +447,6 @@ void CommandHandler::handleMODE(Client* client, std::istringstream& iss) // Hand
             else
                 channel->setKey("");                                    // Remove password
         }
-
         else if (m.mode == 'o')                                         // Operator privilege mode
         {
             Client* target = _server->getClientByNick(m.param);         // Find target client by nick

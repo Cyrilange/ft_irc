@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:32:50 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/23 14:06:59 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/24 22:24:47 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -41,11 +41,20 @@ std::string Client::extractMessage()
 void Client::setNick(const std::string &nick) { _nick = nick; }
 std::string Client::getNick() const { return _nick; }
 void Client::setUsername(const std::string &username) { _username = username; }
+void Client::setRealname(const std::string &realname) {_realname = realname;}
 std::string Client::getUsername() const { return _username; }
 void Client::setPassAccepted(bool value) { _passAccepted = value; }
 bool Client::isPassAccepted() const { return _passAccepted;}
 bool Client::isRegistered() const { return _passAccepted && !_nick.empty() && !_username.empty();}
-void Client::sendMessage(const std::string& msg) { ::send(_fd, msg.c_str(), msg.length(), 0);}
+void Client::sendMessage(const std::string& msg)
+{
+    std::string formatted = msg;
+
+    if (formatted.length() < 2 || formatted.substr(formatted.length() - 2) != "\r\n")
+        formatted += "\r\n";
+
+    send(_fd, formatted.c_str(), formatted.size(), 0);
+}
 bool Client::isWelcomeSent() const { return _welcomeSent; }
 void Client::setWelcomeSent(bool v) { _welcomeSent = v; }
 

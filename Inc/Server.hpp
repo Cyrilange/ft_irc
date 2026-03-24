@@ -45,6 +45,7 @@ public:
     void                removeClient(int fd);
     static void         signalHandler(int sig); // static signal handler
     Channel*            getChannel(const std::string& name);
+    std::map<std::string, Channel*>& getChannels();
     Channel*            createChannel(const std::string& name, Client* creator);
     void                removeChannel(const std::string& name);
 

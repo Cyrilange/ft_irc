@@ -6,14 +6,14 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 01:32:50 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/24 22:24:47 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/24 23:00:13 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../Inc/Client.hpp"
 
 
-Client::Client(int fd) : _fd(fd) , _passAccepted(false) , _welcomeSent(false) {}
+Client::Client(int fd) : _fd(fd) , _passAccepted(false) , _welcomeSent(false), _hasPing(true) {}
 Client::~Client() {}
 int Client::getFd() const { return _fd; }
 void Client::appendToBuffer(const std::string &data) { _buffer += data; }
@@ -45,7 +45,7 @@ void Client::setRealname(const std::string &realname) {_realname = realname;}
 std::string Client::getUsername() const { return _username; }
 void Client::setPassAccepted(bool value) { _passAccepted = value; }
 bool Client::isPassAccepted() const { return _passAccepted;}
-bool Client::isRegistered() const { return _passAccepted && !_nick.empty() && !_username.empty();}
+bool Client::isRegistered() const { return _passAccepted && !_nick.empty() && !_username.empty() && _hasPing == true;}
 void Client::sendMessage(const std::string& msg)
 {
     std::string formatted = msg;

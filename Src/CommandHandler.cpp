@@ -217,7 +217,6 @@ void CommandHandler::handleNICK(Client* client, std::istringstream& iss) // Hand
     }
 
     client->setNick(nick);                                      // Set nick before checking registration
-    std::cout << "Client fd=" << client->getFd() << " nick=" << nick << std::endl; // Debug
 
     if (client->isRegistered() && !client->isWelcomeSent()) {   // If fully registered and welcome not sent yet
         client->setWelcomeSent(true);                           // Mark welcome as sent

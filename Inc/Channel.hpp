@@ -25,6 +25,7 @@ private:
     std::vector<Client*> _members;          // all clients in the channel
     std::vector<Client*> _admins;        	// clients with operator privilege, operator is admin ( in irc we say operator) 
     std::vector<Client*> _invited;          // clients invited (mode i)
+   
 
 public:
     Channel(const std::string& name);

@@ -126,7 +126,7 @@ void Server::initSocket()
     addr.sin_addr.s_addr = INADDR_ANY;                  // Accept connections from any IP
 
     if (bind(_serverSocket, (sockaddr *)&addr, sizeof(addr)) < 0)
-        throw std::runtime_error("bind() failed");      // Bind socket to address and port
+        throw std::runtime_error("bind");      // Bind socket to address and port
 
     if (listen(_serverSocket, SOMAXCONN) < 0)
         throw std::runtime_error("listen() failed");     // Start listening for connections

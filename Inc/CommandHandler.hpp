@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 13:12:54 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/24 15:59:52 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/24 22:48:34 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -21,6 +21,8 @@
 #include "Channel.hpp"
 #include <sys/socket.h>
 #include "Channel.hpp"
+#include <algorithm>
+
 class Server;
 class Client;
 class Channel;

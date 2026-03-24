@@ -144,6 +144,9 @@ void CommandHandler::handleCommand(Client* client, std::string msg) // Parse and
     std::string cmd;                                            // Variable to store command name
     iss >> cmd;                                                 // Extract first word (the command)
     cmd.erase(cmd.find_last_not_of("\r\n") + 1);               // Strip trailing \r\n from command
+    for (size_t i = 0; i < cmd.length(); ++i) {
+        cmd[i] = std::toupper(static_cast<unsigned char>(cmd[i]));// because IRC is not sensible so COMMAND or command or even coMand shoudl work
+    }
     if (!client->isPassAccepted() && cmd != "PASS" && cmd != "CAP" && cmd != "NICK" && cmd != "USER" && cmd != "PING")
     {
         sendResponse(client, "ERROR :You need to authenticate with PASS first"); // Reject unauthenticated command

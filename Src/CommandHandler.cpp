@@ -156,6 +156,7 @@ void CommandHandler::handleCommand(Client* client, std::string msg) // Parse and
 
     if (it == _handlers.end()) {
         std::cout << "Unknown command: " << cmd << std::endl; // if you do like NICKnickname with no space bwteen the command and the name youll have an error on the server side 
+        sendError(client, ERR_UNKNOWNCOMMAND, cmd + " :Unknown command");
         return;
     }   
     (this->*(it->second))(client, iss);                                 // Call the corresponding handler     
@@ -166,7 +167,7 @@ void CommandHandler::sendWelcome(Client* client) // Send the 4 welcome messages 
 {
     const std::string& nick = client->getNick(); // Get client nickname
 
-    sendResponse(client, ":ircserv " + std::string(RPL_WELCOME)  + " " + nick + " :Welcome to the IRC Network " + nick); // 001
+    sendResponse(client, ":ircserv " + std::string(RPL_WELCOME)  + " " + nick + " :Welcome to the  ircserv Network, " + nick); // 001
     sendResponse(client, ":ircserv " + std::string(RPL_YOURHOST) + " " + nick + " :Your host is ircserv, running version 1.0"); // 002
     sendResponse(client, ":ircserv " + std::string(RPL_CREATED)  + " " + nick + " :This server was created just now"); // 003
     sendResponse(client, ":ircserv " + std::string(RPL_MYINFO)   + " " + nick + " ircserv 1.0 o o"); // 004
@@ -232,7 +233,7 @@ void CommandHandler::handleUSER(Client* client, std::istringstream& iss)
     // extract the args
     iss >> username >> hostname >> servername;
     std::getline(iss, realname);
-    //for RCF 2812 we need 4 args for user <username> <hostname> <servername> :<realname>
+    //for RCF 2812 we need 4 args for user <username> <hostname> <servername> :<realname> (user ali 0 * :My name is)
     if (username.empty() || realname.empty()) {
         sendError(client, "461", "USER :Not enough parameters");
         return;
@@ -242,6 +243,8 @@ void CommandHandler::handleUSER(Client* client, std::istringstream& iss)
         return;
     }
     if (!realname.empty() && realname[0] == ' ') realname.erase(0, 1);
+    if(realname[0] != ':') {sendError(client, "461", "USER :Not enough parameters");
+        return;}
     if (!realname.empty() && realname[0] == ':') realname.erase(0, 1);
     client->setUsername(username);
     client->setRealname(realname);

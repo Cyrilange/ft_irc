@@ -3,9 +3,11 @@ NAME = ircserv
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 
-SRC = Src/main.cpp Src/Server.cpp Src/Client.cpp Src/CommandHandler.cpp Src/Channel.cpp
+SRC = Src/Server.cpp Src/Client.cpp  Src/Channel.cpp Src/main.cpp Src/CommandHandler.cpp Src/Bot.cpp
 
-OBJ = $(SRC:.cpp=.o)
+
+
+OBJ = $(addprefix obj/, $(SRC:.cpp=.o))
 
 RESET  = \033[0m
 BOLD   = \033[1m
@@ -13,6 +15,8 @@ CYAN   = \033[36m
 GREEN  = \033[32m
 
 all: $(NAME)
+
+
 
 $(NAME): $(OBJ)
 	@$(CXX) $(CXXFLAGS) $(OBJ) -o $(NAME)
@@ -25,14 +29,15 @@ $(NAME): $(OBJ)
 	@echo "  ██║██║  ██║╚██████╗███████║███████╗██║  ██║ ╚████╔╝ "
 	@echo "  ╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝ "
 	@echo "$(RESET)"
-	@echo "$(GREEN)$(BOLD)  ✓ Build successful — $(NAME) is ready!$(RESET)"
+	@echo "$(GREEN)$(BOLD)  ✓ Build $(NAME) ready!$(RESET)"
 	@echo " "
 
-%.o: %.cpp
+obj/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	@$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	@rm -f $(OBJ)
+	@rm -rf obj
 
 fclean: clean
 	@rm -f $(NAME)
@@ -40,4 +45,3 @@ fclean: clean
 re: fclean all
 
 .PHONY: all clean fclean re
-  

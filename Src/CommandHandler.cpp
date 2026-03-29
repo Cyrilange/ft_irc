@@ -1,13 +1,16 @@
 
-#include "../Inc/Server.hpp"
-#include "../Inc/Client.hpp"
-#include "../Inc/Replies.hpp"
-#include "../Inc/Channel.hpp"
-#include <iostream>
+#include "../Inc/CommandHandler.hpp"
+
+
 
 CommandHandler::CommandHandler(Server* server) : _server(server) { initHandlers(); } // Constructor: store server pointer and initialize command handlers
 
 CommandHandler::~CommandHandler() {} // Destructor: nothing to clean
+
+Bot CommandHandler::getBot() {
+    return _bot;
+}
+
 
 void CommandHandler::initHandlers() { 
     _handlers["CAP"]     = &CommandHandler::handleCAP;     // CAP command for HexChat handshake
@@ -171,6 +174,8 @@ void CommandHandler::sendWelcome(Client* client) // Send the 4 welcome messages 
     sendResponse(client, ":ircserv " + std::string(RPL_YOURHOST) + " " + nick + " :Your host is ircserv, running version 1.0"); // 002
     sendResponse(client, ":ircserv " + std::string(RPL_CREATED)  + " " + nick + " :This server was created just now"); // 003
     sendResponse(client, ":ircserv " + std::string(RPL_MYINFO)   + " " + nick + " ircserv 1.0 o o"); // 004
+
+    sendResponse(client, ":ircbot!bot@ircserv PRIVMSG " + nick + " :Welcome " + nick + "! I am ircbot, type !help for help.");
 }
 
 //PASSWORD
@@ -316,7 +321,12 @@ void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss)
         return;
     }
     std::string prefix = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv PRIVMSG " + targetName + " :" + message;
-
+    if (targetName == "ircbot") {
+        std::string response = _bot.handleMessage(message, client->getNick());
+        if (!response.empty())
+            sendResponse(client, response);
+        return;
+    }
     
     if (targetName[0] == '#') { // If target is a channel
         Channel* channel = _server->getChannel(targetName);

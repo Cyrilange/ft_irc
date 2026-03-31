@@ -38,17 +38,17 @@ std::string Bot::handleMessage(const std::string& msg, const std::string& nick, 
     hi.push_back("Good day sweety.");
     std::string hello = hi[rand() % hi.size()];
 
-    if (msg == ":!time")
+    if (msg == "!time")
         return ":ircbot!bot@ircserv PRIVMSG " + nick + " :" + getTime();
-    if (msg == ":!help")
+    if (msg == "!help")
         return ":ircbot!bot@ircserv PRIVMSG " + nick + " :Available commands: !time !help !joke !quote !channel !hi !list";
-    if (msg == ":!quote")
+    if (msg == "!quote")
         return ":ircbot!bot@ircserv PRIVMSG " + nick + " :" + quote;
-    if (msg == ":!joke")
+    if (msg == "!joke")
         return ":ircbot!bot@ircserv PRIVMSG " + nick + " :" + joke;
-    if (msg == ":!hi")
+    if (msg == "!hi")
         return ":ircbot!bot@ircserv PRIVMSG " + nick + " :" + hello;
-    if (msg == ":!list") {
+    if (msg == "!list") {
         if (!channel)
             return ":ircbot!bot@ircserv PRIVMSG " + nick + " :You are not in a channel.";
         const std::vector<Client*>& members = channel->getMembers();

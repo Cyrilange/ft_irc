@@ -92,14 +92,6 @@ static std::string buildNamesList(Channel* channel)
     return list;
 }
 
-static std::string getDate()
-{
-    time_t now = time(0);
-    std::string dt = ctime(&now);
-    if (!dt.empty() && dt[dt.size() - 1] == '\n')
-        dt.erase(dt.size() - 1);
-    return dt;
-}
 
 static bool isValidNickChar(char c, bool first) // Check if character is valid for a nickname
 {
@@ -181,7 +173,7 @@ void CommandHandler::sendWelcome(Client* client)
 
     sendResponse(client, ":ircserv " + std::string(RPL_WELCOME)  + " " + nick + " :Welcome to the ircserv Network, " + nick);
     sendResponse(client, ":ircserv " + std::string(RPL_YOURHOST) + " " + nick + " :Your host is ircserv, running version 1.0");
-    sendResponse(client, ":ircserv " + std::string(RPL_CREATED)  + " " + nick + " :This server was created " + getDate());
+    sendResponse(client, ":ircserv " + std::string(RPL_CREATED)  + " " + nick + " :This server was created " + _bot.getTime());
     sendResponse(client, ":ircserv " + std::string(RPL_MYINFO)   + " " + nick + " ircserv 1.0 o itklo");
 
     sendResponse(client, ":ircbot!bot@ircserv PRIVMSG " + nick + " :Welcome " + nick + "! I am ircbot, type !help for help.");

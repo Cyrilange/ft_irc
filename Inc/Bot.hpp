@@ -5,8 +5,11 @@
 #include <ctime>
 #include <vector>
 
-#include "Channel.hpp"
-#include "Client.hpp"
+
+
+
+class Client; 
+class Channel;
 
 class Bot {
 public:

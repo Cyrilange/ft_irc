@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 13:12:54 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/29 20:22:59 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/03/31 18:43:43 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,7 +26,7 @@
 #include "Server.hpp"
 #include "Replies.hpp"
 
-
+class Bot; 
 class Server;
 class Client;
 class Channel;

@@ -54,6 +54,8 @@ operators:
 
 [Internet relay chat protocole : RFC 1459](https://datatracker.ietf.org/doc/html/rfc1459)
 
+[IRC 2812](https://www.rfc-editor.org/rfc/rfc2812)
+
 [IRC doc](https://modern.ircdocs.horse/)
 
 # <u>Learning Objectives</u>

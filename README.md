@@ -26,7 +26,27 @@ you will receive welcome message and you will be abble to sue our ircbot
 
 
 commands : not sensible like JoiN == join == JOIN == JOin
-  -JOIN with # or & to join a channel
+  -JOIN
+   The JOIN command is used by a user to request to start listening to
+   the specific channel.  Servers MUST be able to parse arguments in the
+   form of a list of target, but SHOULD NOT use lists when sending JOIN
+   messages to clients.
+
+   Once a user has joined a channel, he receives information about
+   all commands his server receives affecting the channel.  This
+   includes JOIN, MODE, KICK, PART, QUIT and of course PRIVMSG/NOTICE.
+   This allows channel members to keep track of the other channel
+   members, as well as channel modes.
+
+  -TOPIC
+   The TOPIC command is used to change or view the topic of a channel.
+   The topic for channel  is returned if there is no topic
+   given.  If the topic parameter is present, the topic for that
+   channel will be changed, if this action is allowed for the user
+   requesting it.  If the topic parameter is an empty string, the
+   topic for that channel will be removed.
+
+
   -PRIVMSG with name or channel and finally  message to message 
   -PART with channel and explanation to leave a channel 
   -QUIT to quit 
@@ -39,6 +59,8 @@ commands : not sensible like JoiN == join == JOIN == JOin
     - k: Set/remove the channel key (password)
     - o: Give/take channel operator privilege
     - l: Set/remove the user limit to channel
+
+
 
 
 ###### BOT

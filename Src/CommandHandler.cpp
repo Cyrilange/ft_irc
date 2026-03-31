@@ -25,7 +25,7 @@ void CommandHandler::initHandlers() {
     _handlers["PART"] = &CommandHandler::handlePART;     //to quit the chanell but not being disconected for the socket
     //part      
     //kick
-    //topic
+    _handlers["TOPIC"] = &CommandHandler::handleTOPIC;
     //invite
     //who
 }
@@ -305,7 +305,52 @@ void CommandHandler::handleJOIN(Client* client, std::istringstream& iss)
     sendResponse(client, ":ircserv " + std::string(RPL_NAMREPLY) + " " + client->getNick() + " = " + channelName + " :" + namesList);
     sendResponse(client, ":ircserv " + std::string(RPL_ENDOFNAMES) + " " +  client->getNick() + " " + channelName + " :End of /NAMES list");
 }
- 
+
+//TOPIC
+
+void CommandHandler::handleTOPIC(Client* client, std::istringstream& iss)
+{
+    std::string targetName;
+    iss >> targetName;
+
+    std::string message;
+    std::getline(iss, message);
+
+    if (!message.empty() && message[0] == ' ') { message.erase(0, 1); }
+    if (!message.empty() && message[0] == ':') { message.erase(0, 1); }
+
+    if (targetName.empty()) {
+        sendError(client, ERR_NEEDMOREPARAMS, "TOPIC :Not enough parameters");
+        return;
+    }
+
+    Channel* channel = _server->getChannel(targetName);
+    if (!channel) {
+        sendError(client, ERR_NOSUCHCHANNEL, targetName + " :No such channel");
+        return;
+    }
+
+    if (!channel->isMember(client)) {
+        sendError(client, ERR_NOTONCHANNEL, targetName + " :You're not on that channel");
+        return;
+    }
+
+    if (message.empty()) {
+        std::string topic = channel->getTopic();
+        if (topic.empty())
+            sendResponse(client, ":ircserv " + std::string(RPL_NOTOPIC) + " " + client->getNick() + " " + targetName + " :No topic is set");
+        else
+            sendResponse(client, ":ircserv " + std::string(RPL_TOPIC) + " " + client->getNick() + " " + targetName + " :" + topic);
+        return;
+    }
+    if (channel->isTopicRestricted() && !channel->isAdmin(client)) {
+        sendError(client, ERR_CHANOPRIVSNEEDED, targetName + " :You're not channel operator");
+        return;
+    }
+    channel->setTopic(message);
+    std::string prefix = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv";
+    channel->broadcast(prefix + " TOPIC " + targetName + " :" + message, NULL);
+}
 //PRIVMSG
 
 

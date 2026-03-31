@@ -19,12 +19,21 @@ The learning objective in this project is to gain practical experience with low-
 
 ###### to start you shall use ./ircserv [port] [password] 
 ###### Then open a new terminal ( you can open multiple) with nc then the port , ex : nc [localhost || ipv4] 6667
-- Then, we have to implement the commands that are specific to channel
-operators:
+###### you can also use from hexcat 
+
+first you shall enter the password then the nick and finally the user 
+you will receive welcome message and you will be abble to sue our ircbot 
+
+
+commands : not sensible like JoiN == join == JOIN == JOin
+  -JOIN with # or & to join a channel
+  -PRIVMSG with name or channel and finally  message to message 
+  -PART with channel and explanation to leave a channel 
+  -QUIT to quit 
   - KICK - Eject a client from the channel
   - INVITE - Invite a client to a channel
   - TOPIC - Change or view the channel topic
-  - MODE - Change the channel’s mode:
+  - MODE - Change the channel’s mode: + to add and - to leave 
     - i: Set/remove Invite-only channel
     - t: Set/remove the restrictions of the TOPIC command to channel operators
     - k: Set/remove the channel key (password)
@@ -32,9 +41,13 @@ operators:
     - l: Set/remove the user limit to channel
 
 
-    First you need to put the pass , then make a nick and a user 
-    you can send message via privmsg [name to send ] [message ]
-    you can also join a channel 
+###### BOT
+Available commands: !time !help !joke !quote !channel !hi !list";
+the bot has multiple jokes, quotes and even hi ( it is random ) 
+
+list on bot.cpp in handleMessage , we used a vector and the push_back() to add sentences 
+then we made a function make it random 
+  
 
 
 # <u>Resources</u>

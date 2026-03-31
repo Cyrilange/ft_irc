@@ -306,52 +306,7 @@ void CommandHandler::handleJOIN(Client* client, std::istringstream& iss)
 }
  
 //PRIVMSG
-/*
-void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss)
-{
-    
-    std::string targetName;
-    iss >> targetName;
 
-    std::string message;
-    std::getline(iss, message);
-
-    if (!message.empty() && message[0] == ' ') { message.erase(0, 1);}
-    if (!message.empty() && message[0] == ':') {message.erase(0, 1);}
-    if (targetName.empty() || message.empty()) {
-        sendError(client, ERR_NEEDMOREPARAMS, "PRIVMSG :Not enough parameters");
-        return;
-    }
-    Channel* channel = NULL;
-    std::string prefix = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv PRIVMSG " + targetName + " :" + message;
-    if (targetName == "ircbot") {
-        std::string response = _bot.handleMessage(message, client->getNick(), Channel::getName());
-        if (!response.empty())
-            sendResponse(client, response);
-        return;
-    }
-    
-    if (targetName[0] == '#') { // If target is a channel
-        Channel* channel = _server->getChannel(targetName);
-        if (!channel) {
-            sendError(client, ERR_NOSUCHCHANNEL, targetName + " :No such channel");
-            return;
-        }
-        if (!channel->isMember(client)) {
-            sendError(client, ERR_CANNOTSENDTOCHAN, targetName + " :Cannot send to channel");
-            return;
-        }
-        channel->broadcast(prefix, client); // send to everyone except sender
-    }
-    else {
-        Client* target = _server->getClientByNick(targetName);
-        if (!target) {
-            sendError(client, ERR_NOSUCHNICK, targetName + " :No such nick");
-            return;
-        }
-        target->sendMessage(prefix + "\r\n");
-    }
-}*/
 
 void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss)
 {
@@ -369,15 +324,14 @@ void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss)
         return;
     }
 
-    std::string prefix = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv PRIVMSG " + targetName + " :" + message;
-
     if (targetName == "ircbot") {
-        std::string response = _bot.handleMessage(message, client->getNick(), NULL);
+        Channel* botChannel = _server->getChannelByMember(client);
+        std::string response = _bot.handleMessage(message, client->getNick(), botChannel);
         if (!response.empty())
             sendResponse(client, response);
         return;
     }
-
+    std::string prefix = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv PRIVMSG " + targetName + " :" + message;
     Channel* channel = NULL;
     if (targetName[0] == '#' ||targetName[0] == '&' ) {
         channel = _server->getChannel(targetName);

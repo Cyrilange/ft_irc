@@ -254,6 +254,17 @@ Channel* Server::getChannel(const std::string& name)        // Find channel by n
     return NULL;
 }
 
+Channel* Server::getChannelByMember(Client* client)
+{
+    std::map<std::string, Channel*>::iterator it = _channels.begin();
+    for (; it != _channels.end(); ++it)
+    {
+        if (it->second->isMember(client))
+            return it->second;
+    }
+    return NULL;
+}
+
 Channel* Server::createChannel(const std::string& name, Client* creator) // Create new channel
 {
     Channel* channel = new Channel(name);

@@ -48,6 +48,7 @@ public:
     std::map<std::string, Channel*>& getChannels();
     Channel*            createChannel(const std::string& name, Client* creator);
     void                removeChannel(const std::string& name);
+    Channel*            getChannelByMember(Client* client);
 
 };
 

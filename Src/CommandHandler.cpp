@@ -92,6 +92,15 @@ static std::string buildNamesList(Channel* channel)
     return list;
 }
 
+static std::string getDate()
+{
+    time_t now = time(0);
+    std::string dt = ctime(&now);
+    if (!dt.empty() && dt[dt.size() - 1] == '\n')
+        dt.erase(dt.size() - 1);
+    return dt;
+}
+
 static bool isValidNickChar(char c, bool first) // Check if character is valid for a nickname
 {
     if (first) // First character must be a letter or special character
@@ -166,14 +175,14 @@ void CommandHandler::handleCommand(Client* client, std::string msg) // Parse and
 }
 
 //WELCOME
-void CommandHandler::sendWelcome(Client* client) // Send the 4 welcome messages after successful registration
+void CommandHandler::sendWelcome(Client* client)
 {
-    const std::string& nick = client->getNick(); // Get client nickname
+    const std::string& nick = client->getNick();
 
-    sendResponse(client, ":ircserv " + std::string(RPL_WELCOME)  + " " + nick + " :Welcome to the  ircserv Network, " + nick); // 001
-    sendResponse(client, ":ircserv " + std::string(RPL_YOURHOST) + " " + nick + " :Your host is ircserv, running version 1.0"); // 002
-    sendResponse(client, ":ircserv " + std::string(RPL_CREATED)  + " " + nick + " :This server was created just now"); // 003
-    sendResponse(client, ":ircserv " + std::string(RPL_MYINFO)   + " " + nick + " ircserv 1.0 o o"); // 004
+    sendResponse(client, ":ircserv " + std::string(RPL_WELCOME)  + " " + nick + " :Welcome to the ircserv Network, " + nick);
+    sendResponse(client, ":ircserv " + std::string(RPL_YOURHOST) + " " + nick + " :Your host is ircserv, running version 1.0");
+    sendResponse(client, ":ircserv " + std::string(RPL_CREATED)  + " " + nick + " :This server was created " + getDate());
+    sendResponse(client, ":ircserv " + std::string(RPL_MYINFO)   + " " + nick + " ircserv 1.0 o itklo");
 
     sendResponse(client, ":ircbot!bot@ircserv PRIVMSG " + nick + " :Welcome " + nick + "! I am ircbot, type !help for help.");
 }

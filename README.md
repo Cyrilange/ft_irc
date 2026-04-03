@@ -22,7 +22,26 @@ The learning objective in this project is to gain practical experience with low-
 ###### you can also use from hexcat 
 
 first you shall enter the password then the nick and finally the user 
-you will receive welcome message and you will be abble to sue our ircbot 
+
+the user is : Parameters: <user> <mode> <unused> <realname>  exemple : USER guest 0 * :Ronnie Reagan 
+
+you receive then :
+
+  001    RPL_WELCOME
+              "Welcome to the Internet Relay Network
+               nick!user@host"
+ 002    RPL_YOURHOST
+              "Your host is servername, running version ver"
+003    RPL_CREATED
+              "This server was created date"
+004    RPL_MYINFO
+              "servername> version> available user modes
+               available channel modes"
+
+         - The server sends Replies 001 to 004 to a user upon
+           successful registration.
+
+as we did the bonus you will receive as well the bot message 
 
 
 commands : not sensible like JoiN == join == JOIN == JOin

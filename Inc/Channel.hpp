@@ -16,13 +16,13 @@ struct ModeChange {
 class Channel
 {
 private:
-    std::string          _name;             // channel name (#general)
+    std::string          _name;             // channel name 
     std::string          _topic;            // channel topic
     std::string          _key;              // password (mode k)
     int                  _userLimit;        // max users (mode l), 0 = no limit
     bool                 _inviteOnly;       // mode i
     bool                 _topicRestricted;  // mode t
-    std::vector<Client*> _members;          // all clients in the channel
+    std::vector<Client*> _members;          // menbers of the the channel
     std::vector<Client*> _admins;        	// clients with operator privilege, operator is admin ( in irc we say operator) 
     std::vector<Client*> _invited;          // clients invited (mode i)
    
@@ -56,7 +56,7 @@ public:
     // Invite 
     void    addInvited(Client* client);
     bool    isInvited(Client* client) const;
-    // For all menbers
+    // For all menbers, messages
     void    broadcast(const std::string& msg, Client* exclude = NULL);
 };
 

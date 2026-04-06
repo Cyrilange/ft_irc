@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/31 23:36:40 by csalamit          #+#    #+#             */
-/*   Updated: 2026/04/03 21:39:36 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/04/06 19:57:10 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,9 +36,9 @@ void CommandHandler::initHandlers() {
     _handlers["QUIT"] = &CommandHandler::handleQUIT;       //to quit , to leave 
     _handlers["PART"] = &CommandHandler::handlePART;     //to quit the chanell but not being disconected for the socket
     //part      
-    //kick
+    _handlers["KICK"] = &CommandHandler::handleKICK;
     _handlers["TOPIC"] = &CommandHandler::handleTOPIC;
-    //invite
+    _handlers["INVITE"] = &CommandHandler::handleINVITE;
     //who
 }
 
@@ -328,6 +328,95 @@ void CommandHandler::handleJOIN(Client* client, std::istringstream& iss)
     sendResponse(client, ":ircserv " + std::string(RPL_NAMREPLY) + " " + client->getNick() + " = " + channelName + " :" + namesList);
     sendResponse(client, ":ircserv " + std::string(RPL_ENDOFNAMES) + " " +  client->getNick() + " " + channelName + " :End of /NAMES list");
 }
+//KICK
+
+void CommandHandler::handleKICK(Client *client, std::istringstream& iss)
+{
+    std::string channel;
+    std::string user;
+    std::string reason;
+    iss >> channel >> user;
+
+    if (channel.empty() || user.empty()) {
+    sendError(client, ERR_NEEDMOREPARAMS, "KICK :Not enough parameters");
+    return;
+    }
+    Channel* targetChannel = _server->getChannel(channel);
+    if (!targetChannel) {
+    sendError(client, ERR_NOSUCHCHANNEL, channel + " :No such channel");
+    return;
+    }
+    if (!targetChannel->isMember(client)) {
+    sendError(client, ERR_NOTONCHANNEL, channel + " :You're not on that channel");
+    return;
+    }
+    if (!targetChannel->isAdmin(client)) {
+    sendError(client, ERR_CHANOPRIVSNEEDED, channel + " :You're not channel operator");
+    return;
+    }
+    Client* target = _server->getClientByNick(user);
+    if (!target || !targetChannel->isMember(target)) {
+    sendError(client, ERR_USERNOTINCHANNEL, user + " " + channel + " :not in channel");
+    return;
+    }
+    std::getline(iss, reason);
+    if (!reason.empty() && reason[0] == ' ')
+    reason.erase(0, 1);
+    if (!reason.empty() && reason[0] == ':')
+    reason.erase(0, 1);
+    std::string kickMsg = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv KICK " +
+    channel + " " + user;
+    if (!reason.empty())
+    kickMsg += " :" + reason;
+    targetChannel->broadcast(kickMsg, NULL);
+    targetChannel->removeMember(target);
+    targetChannel->removeAdmin(target);
+    if (targetChannel->getMembers().empty())
+    _server->removeChannel(channel);
+}
+
+
+
+//INVITE
+void CommandHandler::handleINVITE(Client *client, std::istringstream& iss)
+{
+    std::string targetNick;
+    std::string channelName;
+    iss >> targetNick >> channelName;
+    channelName = cleanChannelName(channelName);
+    if (targetNick.empty() || channelName.empty()) {
+    sendError(client, ERR_NEEDMOREPARAMS, "INVITE :Not enough parameters");
+    return;
+    }
+    Client* target = _server->getClientByNick(targetNick);
+    if (!target) {
+    sendError(client, ERR_NOSUCHNICK, targetNick + " :No such nick");
+    return;
+    }
+    Channel* channel = _server->getChannel(channelName);
+    if (!channel) {
+    sendError(client, ERR_NOSUCHCHANNEL, channelName + " :No such channel");
+    return;
+    }
+    if (!channel->isMember(client)) {
+    sendError(client, ERR_NOTONCHANNEL, channelName + " :You're not on that channel");
+    return;
+    }
+    if (channel->isInviteOnly() && !channel->isAdmin(client)) {
+    sendError(client, ERR_CHANOPRIVSNEEDED, channelName + " :You're not channel operator");
+    return;
+    }
+    if (channel->isMember(target)) {
+    sendError(client, ERR_USERONCHANNEL, targetNick + " " + channelName + " :is already on channel");
+    return;
+    }
+    channel->addInvited(target);
+    sendResponse(client, ":ircserv " + std::string(RPL_INVITING) + " " + client->getNick() + " " + targetNick + " " + channelName);
+    target->sendMessage(":" + client->getNick() + "!" + client->getUsername() + "@ircserv INVITE " + targetNick + " :" + channelName);
+}
+
+
+
 
 //TOPIC
 

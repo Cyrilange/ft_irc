@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/08 13:12:54 by csalamit          #+#    #+#             */
-/*   Updated: 2026/03/31 23:24:05 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/04/06 19:50:52 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,6 +54,8 @@ public:
     void handlePART(Client* client, std::istringstream& iss);
     void handleMODE(Client* client, std::istringstream& iss);
     void handleTOPIC(Client* client, std::istringstream& iss);
+    void handleKICK(Client *client, std::istringstream& iss);
+    void handleINVITE(Client *client, std::istringstream& iss);
     void sendWelcome(Client* client);
 
     Bot getBot();

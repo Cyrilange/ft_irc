@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/31 23:36:40 by csalamit          #+#    #+#             */
-/*   Updated: 2026/04/06 19:57:10 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/04/06 20:10:15 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -551,12 +551,11 @@ void CommandHandler::handleQUIT(Client* client, std::istringstream& iss)
         Channel* channel = it->second;
 
         if (channel->isMember(client)) {
-            channel->broadcast(quitMsg, client);
+            channel->broadcast(quitMsg, NULL);
             channel->removeMember(client);
         }
     }
-    std::cout << "Client " << client->getNick() << " quit: " << reason << std::endl;
-    sendResponse(client, "ERROR :Closing connection");
+ 
     _server->removeClient(client->getFd());
 }
 //PART

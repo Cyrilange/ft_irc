@@ -100,6 +100,10 @@ commands : not sensible like JoiN == join == JOIN == JOin
     - l: Set/remove the user limit to channel
 
 
+###### crtl + c / crtl + z
+
+c is leaving the app
+z the app run on back , to get back on it you have to do fg 
 
 
 ###### BOT

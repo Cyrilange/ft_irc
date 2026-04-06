@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/31 23:36:40 by csalamit          #+#    #+#             */
-/*   Updated: 2026/04/03 21:26:54 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/04/03 21:39:36 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -262,7 +262,7 @@ void CommandHandler::handleUSER(Client* client, std::istringstream& iss)
     // extract the args
     iss >> username >> hostname >> servername;
     std::getline(iss, realname);
-    //for RCF 2812 we need 4 args for user <username> <hostname> <servername> :<realname> (user ali 0 * :My name is)
+    //for RCF 2812 we need 4 args for user <username> <hostname> <servername> :<realname> (user ali 0 * :My realname is)
     if (username.empty() || realname.empty()) {
         sendError(client, "461", "USER :Not enough parameters");
         return;

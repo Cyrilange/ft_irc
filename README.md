@@ -27,10 +27,10 @@ the user is : Parameters: <user> <mode> <unused> <realname>  exemple : USER gues
 
 you receive then :
 
-  001    RPL_WELCOME
+001    RPL_WELCOME
               "Welcome to the Internet Relay Network
                nick!user@host"
- 002    RPL_YOURHOST
+002    RPL_YOURHOST
               "Your host is servername, running version ver"
 003    RPL_CREATED
               "This server was created date"
@@ -70,8 +70,28 @@ commands : not sensible like JoiN == join == JOIN == JOin
   -PART with channel and explanation to leave a channel 
   -QUIT to quit 
   - KICK - Eject a client from the channel
-  - INVITE - Invite a client to a channel
-  - TOPIC - Change or view the channel topic
+
+  - INVITE
+   Parameters: nickname channel
+
+   The INVITE command is used to invite a user to a channel.  The
+   parameter nickname is the nickname of the person to be invited to
+   the target channel channel.  There is no requirement that the
+   channel the target user is being invited to must exist or be a valid
+   channel.  However, if the channel exists, only members of the channel
+   are allowed to invite other users.  When the channel has invite-only
+   flag set, only channel operators may issue INVITE command.
+
+  -TOPIC
+   Parameters: channel [ topic ]
+
+   The TOPIC command is used to change or view the topic of a channel.
+   The topic for channel  is returned if there is no <topic>
+   given.  If the topic parameter is present, the topic for that
+   channel will be changed, if this action is allowed for the user
+   requesting it.  If the topic parameter is an empty string, the
+   topic for that channel will be removed.
+
   - MODE - Change the channel’s mode: + to add and - to leave 
     - i: Set/remove Invite-only channel
     - t: Set/remove the restrictions of the TOPIC command to channel operators

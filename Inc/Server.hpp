@@ -27,7 +27,7 @@ private:
     std::vector<Client*> _clients; // list of connected clients
     CommandHandler* _cmdHandler; // command router 
     static Server*  _instance;
-    static bool     _running;
+    static volatile sig_atomic_t _running;
     std::map<std::string, Channel*> _channels; 
 
 public:
@@ -43,7 +43,7 @@ public:
     Client*             getClientByNick(const std::string& nick);
     std::vector<Client*>& getClients();
     void                removeClient(int fd);
-    static void         signalHandler(int sig); // static signal handler
+    static void         signalHandler(int sig);
     Channel*            getChannel(const std::string& name);
     std::map<std::string, Channel*>& getChannels();
     Channel*            createChannel(const std::string& name, Client* creator);

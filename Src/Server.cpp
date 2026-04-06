@@ -7,28 +7,38 @@
 #include <unistd.h>               // For close()
 #include <arpa/inet.h>            // For htons and network utilities
 
-
-// Constructor of the Server class
-Server::Server(int port, const std::string &password) : _port(port), _password(password)
-{
-    _instance = this;                                    // Store instance for signal handler
-    signal(SIGINT, Server::signalHandler);               // Register CTRL+C
-    initSocket();                                        // Init socket first
-    _cmdHandler = new CommandHandler(this);              // Then create command handler
-}
-const std::string& Server::getPassword() const { return _password; }
-std::vector<Client*>& Server::getClients() {return this->_clients;}
-std::map<std::string, Channel*>& Server::getChannels() { return _channels;}
-
 Server* Server::_instance = NULL;
-bool    Server::_running  = true;
+volatile sig_atomic_t Server::_running = 1;
+
 
 void Server::signalHandler(int sig)
 {
     (void)sig;
     std::cout << "\nServer shutting down..." << std::endl;
-    _running = false;  // Just set flag, no delete
+    _running = 0;
 }
+// Constructor of the Server class
+Server::Server(int port, const std::string &password) : _port(port), _password(password)
+{
+    _instance = this;
+
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = Server::signalHandler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT,  &sa, NULL);  // CTRL+C
+    sigaction(SIGTERM, &sa, NULL);  // kill
+    sigaction(SIGQUIT, &sa, NULL);  // CTRL+Z
+
+    initSocket();
+    _cmdHandler = new CommandHandler(this);
+}
+const std::string& Server::getPassword() const { return _password; }
+std::vector<Client*>& Server::getClients() {return this->_clients;}
+std::map<std::string, Channel*>& Server::getChannels() { return _channels;}
+
+
 
 
 // Accept a new client connection

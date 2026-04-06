@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/31 23:36:40 by csalamit          #+#    #+#             */
-/*   Updated: 2026/04/06 23:01:56 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/04/06 23:27:08 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -568,18 +568,39 @@ void CommandHandler::handleQUIT(Client* client, std::istringstream& iss)
         reason.erase(0, 1);
 
     std::string quitMsg = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv QUIT :" + reason;
-    // remove client from all channels
+
     std::map<std::string, Channel*>& channels = _server->getChannels();
+    std::vector<std::string> emptyChannels;
+
     for (std::map<std::string, Channel*>::iterator it = channels.begin(); it != channels.end(); ++it)
     {
         Channel* channel = it->second;
+        if (!channel->isMember(client))
+            continue;
 
-        if (channel->isMember(client)) {
-            channel->broadcast(quitMsg, NULL);
-            channel->removeMember(client);
+        channel->broadcast(quitMsg, NULL);
+
+        if (channel->isAdmin(client))
+        {
+            channel->removeAdmin(client);
+            std::vector<Client*> members = channel->getMembers();
+            if (!members.empty())
+            {
+                channel->addAdmin(members[0]);
+                std::string modeMsg = ":ircserv MODE " + it->first + " +o " + members[0]->getNick();
+                channel->broadcast(modeMsg);
+            }
         }
+
+        channel->removeMember(client);
+
+        if (channel->getMembers().empty())
+            emptyChannels.push_back(it->first);
     }
- 
+
+    for (size_t i = 0; i < emptyChannels.size(); i++)
+        _server->removeChannel(emptyChannels[i]);
+
     _server->removeClient(client->getFd());
 }
 //PART

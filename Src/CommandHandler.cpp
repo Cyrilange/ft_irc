@@ -6,7 +6,7 @@
 /*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/31 23:36:40 by csalamit          #+#    #+#             */
-/*   Updated: 2026/04/06 20:10:15 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/04/06 23:01:56 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,6 +39,7 @@ void CommandHandler::initHandlers() {
     _handlers["KICK"] = &CommandHandler::handleKICK;
     _handlers["TOPIC"] = &CommandHandler::handleTOPIC;
     _handlers["INVITE"] = &CommandHandler::handleINVITE;
+    _handlers["WHO"] = &CommandHandler::handleWHO;
     //who
 }
 
@@ -190,7 +191,30 @@ void CommandHandler::sendWelcome(Client* client)
 
     sendResponse(client, ":ircbot!bot@ircserv PRIVMSG " + nick + " :Welcome " + nick + "! I am ircbot, type !help for help.");
 }
+//WHO
+//this function is not needed so it is minimalist , we put it to have hexchat being smooth
+void CommandHandler::handleWHO(Client *client, std::istringstream& iss)
+{
+    std::string target;
+    if (!(iss >> target))
+        target = "*";
 
+    if (!client) return;
+
+    Channel *chan = _server->getChannel(target); 
+    
+    if (chan) {
+        std::vector<Client*> members = chan->getMembers();
+        for (size_t i = 0; i < members.size(); ++i) {
+            Client *u = members[i];
+            std::string rpl = ":ircserv 352 " + client->getNick() + " " + target + " " + u->getUsername() + " ircserv " + u->getNick() + " H :0 " + u->getUsername() + "\r\n";
+            
+            send(client->getFd(), rpl.c_str(), rpl.length(), 0);
+        }
+    }
+    std::string end = ":ircserv 315 " + client->getNick() + " " + target + " :End of /WHO list.\r\n";
+    send(client->getFd(), end.c_str(), end.length(), 0);
+}
 //PASSWORD
 void CommandHandler::handlePASS(Client* client, std::istringstream& iss) // Handle PASS command for authentication
 {

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   CommandHandler.cpp                                 :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: csalamit <csalamit@student.42malaga.com    +#+  +:+       +#+        */
+/*   By: csalamit <csalamit@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/31 23:36:40 by csalamit          #+#    #+#             */
-/*   Updated: 2026/04/06 23:27:08 by csalamit         ###   ########.fr       */
+/*   Updated: 2026/04/10 17:32:57 by csalamit         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,6 +40,7 @@ void CommandHandler::initHandlers() {
     _handlers["TOPIC"] = &CommandHandler::handleTOPIC;
     _handlers["INVITE"] = &CommandHandler::handleINVITE;
     _handlers["WHO"] = &CommandHandler::handleWHO;
+     _handlers["NOTICE"] = &CommandHandler::handleNOTICE;
     //who
 }
 
@@ -295,9 +296,13 @@ void CommandHandler::handleUSER(Client* client, std::istringstream& iss)
         sendError(client, "462", ":You may not reregister");
         return;
     }
+     if(realname.empty()) {sendError(client, "461", "USER :Not enough parameters"); return;}
     if (!realname.empty() && realname[0] == ' ') realname.erase(0, 1);
-    if(realname[0] != ':') {sendError(client, "461", "USER :Not enough parameters");
-        return;}
+    // for(unsigned long i = 0 ; i < realname.size(); i++) {
+    //     if(realname[i] == ' ') {
+    //     if(realname[0] != ':') {sendError(client, "461", "USER :Not enough parameters"); return;}
+    //     }
+    // }
     if (!realname.empty() && realname[0] == ':') realname.erase(0, 1);
     client->setUsername(username);
     client->setRealname(realname);
@@ -537,6 +542,29 @@ void CommandHandler::handlePRIVMSG(Client* client, std::istringstream& iss)
     }
 }
 
+void CommandHandler::handleNOTICE(Client* client, std::istringstream& iss)
+{
+    std::string targetName;
+    iss >> targetName;
+
+    std::string message;
+    std::getline(iss, message);
+
+    if (!message.empty() && message[0] == ' ') { message.erase(0, 1); }
+    if (!message.empty() && message[0] == ':') { message.erase(0, 1); }
+
+    std::string prefix = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv NOTICE " + targetName + " :" + message;
+    Channel* channel = NULL;
+    if (targetName[0] == '#' ||targetName[0] == '&' ) {
+        channel = _server->getChannel(targetName);
+        channel->broadcast(prefix, client);
+    }
+    else {
+        Client* target = _server->getClientByNick(targetName);
+        target->sendMessage(prefix + "\r\n");
+    }
+}
+
 std::vector<ModeChange> CommandHandler::parseModeString(const std::string& modeStr, std::istringstream& iss) // Parse mode string into list of ModeChange structs
 {
     std::vector<ModeChange> changes;
@@ -588,7 +616,7 @@ void CommandHandler::handleQUIT(Client* client, std::istringstream& iss)
             {
                 channel->addAdmin(members[0]);
                 std::string modeMsg = ":ircserv MODE " + it->first + " +o " + members[0]->getNick();
-                channel->broadcast(modeMsg);
+                channel->broadcast(modeMsg, client);
             }
         }
 
@@ -608,30 +636,63 @@ void CommandHandler::handlePART(Client* client, std::istringstream& iss)
 {
     std::string chanName;
     iss >> chanName;
-    if (chanName.empty()) {
+
+    if (chanName.empty())
+    {
         sendError(client, ERR_NEEDMOREPARAMS, "PART :Not enough parameters");
         return;
     }
+
     Channel* channel = _server->getChannel(chanName);
-    if (!channel) {
+    if (!channel)
+    {
         sendError(client, ERR_NOSUCHCHANNEL, chanName + " :No such channel");
         return;
     }
-    if (!channel->isMember(client)) {
+
+    if (!channel->isMember(client))
+    {
         sendError(client, ERR_NOTONCHANNEL, chanName + " :You're not on that channel");
         return;
     }
+
     std::string reason;
     std::getline(iss, reason);
 
-    if (!reason.empty() && reason[0] == ' ') {reason.erase(0, 1);}
-    if (!reason.empty() && reason[0] == ':')  reason.erase(0, 1);
-    std::string partMsg = ":" + client->getNick() + "!" + client->getUsername() + "@ircserv PART " + chanName;
-    if (!reason.empty()) {partMsg += " :" + reason;}
-    channel->broadcast(partMsg, client);
-    sendResponse(client, partMsg);
+    if (!reason.empty() && reason[0] == ' ')
+        reason.erase(0, 1);
+    if (!reason.empty() && reason[0] == ':')
+        reason.erase(0, 1);
+
+    std::string partMsg = ":" + client->getNick() + "!" +
+                          client->getUsername() + "@ircserv PART " +
+                          chanName;
+
+    if (!reason.empty())
+        partMsg += " :" + reason;
+
+    channel->broadcast(partMsg, NULL);
+
     channel->removeMember(client);
-    if (channel->getMembers().empty()) { _server->removeChannel(chanName); }
+
+    if (channel->isAdmin(client))
+    {
+        channel->removeAdmin(client);
+
+        std::vector<Client*> members = channel->getMembers();
+        if (!members.empty())
+        {
+            channel->addAdmin(members[0]);
+            std::string modeMsg = ":ircserv MODE " + chanName +
+                                  " +o " + members[0]->getNick();
+            channel->broadcast(modeMsg, NULL);
+        }
+    }
+
+    if (channel->getMembers().empty())
+    {
+        _server->removeChannel(chanName);
+    }
 }
 //mode
 void CommandHandler::handleMODE(Client* client, std::istringstream& iss)

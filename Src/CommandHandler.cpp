@@ -673,7 +673,7 @@ void CommandHandler::handlePART(Client* client, std::istringstream& iss)
             channel->addAdmin(members[0]);
             std::string modeMsg = ":ircserv MODE " + chanName +
                                   " +o " + members[0]->getNick();
-            channel->broadcast(modeMsg, NULL);
+            channel->broadcast(modeMsg, client);
         }
     }
 
